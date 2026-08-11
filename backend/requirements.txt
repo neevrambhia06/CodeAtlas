@@ -14,6 +14,3 @@ python-multipart
 email-validator
 google-generativeai
 httpx
-authlibs e n t r y - s d k [ f a s t a p i ] 
- 
- 
