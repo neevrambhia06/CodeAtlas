@@ -1,0 +1,8 @@
+{
+  "domain": "Unclassified",
+  "missing_gaps": [
+    "Logic Gap: Missing Refund Flow",
+    "Logic Gap: Missing Booking Cancellation",
+    "Logic Gap: Missing Password Recovery"
+  ]
+}

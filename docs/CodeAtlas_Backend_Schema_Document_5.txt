@@ -1,0 +1,199 @@
+CodeAtlas – Backend Schema Document
+Version: 1.0
+Purpose: Define the backend architecture, database schema, API design, security model, storage strategy, and infrastructure for the CodeAtlas Software Reasoning Engine.
+1. Backend Architecture
+Client
+   ↓
+API Gateway
+   ↓
+Authentication Service
+Repository Service
+Parser Service
+Knowledge Graph Service
+Reasoning Engine
+Report Service
+Notification Service
+   ↓
+PostgreSQL | Neo4j | Redis | Object Storage
+2. Database Selection
+Relational Database: PostgreSQL
+Knowledge Graph: Neo4j
+Cache: Redis
+Object Storage: AWS S3 / MinIO
+Queue: RabbitMQ
+3. Core Database Tables
+Users
+Organizations
+Repositories
+RepositoryFiles
+AnalysisJobs
+Capabilities
+UserJourneys
+LogicGaps
+KnowledgeGraphs
+Reports
+AuditLogs
+Notifications
+4. Primary Keys & Foreign Keys
+Users(user_id PK)
+
+Organizations(org_id PK)
+
+Repositories(repo_id PK)
+organization_id → Organizations.org_id
+
+AnalysisJobs(job_id PK)
+repo_id → Repositories.repo_id
+
+Capabilities(capability_id PK)
+job_id → AnalysisJobs.job_id
+
+UserJourneys(journey_id PK)
+job_id → AnalysisJobs.job_id
+
+LogicGaps(gap_id PK)
+job_id → AnalysisJobs.job_id
+
+Reports(report_id PK)
+job_id → AnalysisJobs.job_id
+5. Relationships
+Organization → Users (1:N)
+Organization → Repositories (1:N)
+Repository → Analysis Jobs (1:N)
+Analysis Job → Capabilities (1:N)
+Analysis Job → User Journeys (1:N)
+Analysis Job → Logic Gaps (1:N)
+Analysis Job → Reports (1:N)
+6. ER Diagram (Mermaid)
+```mermaid
+erDiagram
+Organizations ||--o{ Users : owns
+Organizations ||--o{ Repositories : contains
+Repositories ||--o{ AnalysisJobs : generates
+AnalysisJobs ||--o{ Capabilities : detects
+AnalysisJobs ||--o{ UserJourneys : reconstructs
+AnalysisJobs ||--o{ LogicGaps : identifies
+AnalysisJobs ||--o{ Reports : exports
+```
+7. Validation Rules
+Email uniqueness
+Repository size limits
+Supported language validation
+Required metadata
+JWT validation
+Role validation
+8. REST API Endpoints
+POST /auth/login
+POST /auth/register
+
+POST /repositories/upload
+GET /repositories
+GET /repositories/{id}
+
+POST /analysis/start
+GET /analysis/{id}
+
+GET /capabilities/{id}
+GET /journeys/{id}
+GET /logic-gaps/{id}
+
+GET /reports/{id}
+POST /reports/export
+9. Authentication Flow
+User Login
+↓
+Credential Validation
+↓
+JWT Generation
+↓
+Access Token
+↓
+Protected APIs
+10. Authorization (RBAC)
+Admin
+Organization Owner
+Developer
+Viewer
+
+Permissions are enforced using middleware and JWT claims.
+11. Caching Strategy
+Redis
+• Session Cache
+• Repository Metadata
+• Dashboard Data
+• Frequently Accessed Reports
+12. Queue Architecture
+RabbitMQ Queues
+• Repository Upload Queue
+• Parsing Queue
+• Knowledge Graph Queue
+• Reasoning Queue
+• Report Generation Queue
+13. File Management
+ZIP Upload
+Repository Extraction
+Temporary Workspace
+Secure Object Storage
+Automatic Cleanup
+14. Rate Limiting
+100 requests/minute
+Repository upload limits
+Authentication throttling
+Export request limits
+15. Error Responses
+400 Bad Request
+401 Unauthorized
+403 Forbidden
+404 Not Found
+413 Payload Too Large
+429 Too Many Requests
+500 Internal Server Error
+16. Sample JSON Request
+{
+  "repository_url": "https://github.com/org/project",
+  "analysis_type": "full"
+}
+17. Sample JSON Response
+{
+  "job_id": "ANL-1001",
+  "status": "processing",
+  "estimated_time": "4 minutes"
+}
+18. Backend Folder Structure
+
+backend/
+├── api/
+├── auth/
+├── repositories/
+├── parser/
+├── knowledge_graph/
+├── reasoning_engine/
+├── reports/
+├── notifications/
+├── database/
+├── middleware/
+├── models/
+├── services/
+├── workers/
+├── tests/
+└── config/
+
+19. Security Measures
+JWT Authentication
+HTTPS
+AES-256 Encryption
+Secrets Manager
+Input Validation
+Parameterized Queries
+Audit Logs
+Role-Based Access Control
+20. Future Backend Enhancements
+GraphQL API
+gRPC Services
+Event-driven Architecture
+Vector Database Integration
+Multi-region Deployment
+Repository Monitoring
+Webhook Integrations
+Appendix
+This Backend Schema document provides the architectural foundation for the CodeAtlas MVP. A production-grade edition would further include normalized SQL schemas, migration scripts, OpenAPI specifications, GraphQL schemas, infrastructure-as-code templates, detailed indexing strategies, and database performance optimization guidelines.

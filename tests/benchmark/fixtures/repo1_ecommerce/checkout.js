@@ -1,0 +1,1 @@
+app.get('/checkout', (req, res) => {})

@@ -1,0 +1,65 @@
+CodeAtlas – Product Requirements Document (PRD)
+Version: 1.0
+Project: CodeAtlas – Software Reasoning Engine
+Purpose: Define the product vision, scope, requirements, and MVP for CodeAtlas.
+1. Product Overview
+CodeAtlas is an AI-powered Software Reasoning Engine that reconstructs software architecture, business capabilities, user journeys, and logical workflow gaps from source code repositories. Unlike code assistants, it focuses on understanding software as a business system.
+2. Problem Statement
+Developers spend significant time understanding unfamiliar codebases. Existing tools generate code or documentation but rarely explain what the software actually does or identify missing business workflows.
+3. Proposed Solution
+Provide repository upload, parsing, knowledge graph generation, capability intelligence, journey reconstruction, and logic-gap detection through an explainable reasoning engine.
+4. Product Vision
+Become the industry's leading Software Reasoning platform for engineering teams by enabling rapid onboarding, maintenance, and architectural understanding.
+5. Goals & Objectives
+- Reduce onboarding time by >60%
+- Automatically identify business capabilities
+- Reconstruct end-to-end user journeys
+- Detect missing business workflows
+- Provide explainable architectural reasoning
+6. Target Audience
+Software Engineers, Tech Leads, Architects, CTOs, Engineering Managers, Consulting Teams, and Enterprises.
+7. User Personas
+• New Developer
+• Senior Architect
+• Engineering Manager
+• CTO / Product Owner
+8. Functional Requirements
+FR-01 Repository Upload
+FR-02 Git Repository Import
+FR-03 Repository Parsing
+FR-04 Knowledge Graph Generation
+FR-05 Capability Detection
+FR-06 Journey Reconstruction
+FR-07 Logic Gap Detection
+FR-08 Interactive Dashboard
+FR-09 Explainable AI Reasoning
+FR-10 Export Reports
+9. Non-Functional Requirements
+Performance (<5 min analysis for medium repositories), scalability, security, availability, maintainability, observability, and explainability.
+10. Feature Prioritization (MoSCoW)
+Must: Upload, Parsing, Knowledge Graph, Reasoning, Dashboard
+Should: Team collaboration, Report export
+Could: Multi-language support
+Won't (MVP): IDE plugins, live code editing
+11. User Roles & Permissions
+Admin, Organization Owner, Developer, Viewer with RBAC-based access.
+12. Success Metrics & KPIs
+- Analysis completion rate
+- Time-to-insight
+- User adoption
+- Reasoning accuracy
+- Customer retention
+13. Risks
+Incorrect inference, unsupported languages, large repositories, LLM cost, privacy concerns.
+14. Constraints
+MVP targets React, Next.js, Node.js, Express, and relational databases.
+15. Competitive Analysis
+Compared with GitHub Copilot, Cursor, Sourcegraph, and CodeSee, CodeAtlas differentiates itself through business-level reasoning rather than code generation.
+16. Market Opportunity
+Growing demand for AI developer tooling and enterprise code understanding platforms.
+17. Acceptance Criteria
+Repository analysis completes successfully, dashboard generated, capabilities detected, user journeys reconstructed, logic gaps explained with evidence.
+18. Future Scope
+Support Java, .NET, Python, Kubernetes, microservices, enterprise governance, IDE integrations, and continuous repository monitoring.
+Appendix
+This PRD is an initial structured version derived from the supplied master prompt. A complete production-grade PRD would expand each section with detailed user stories, acceptance criteria, traceability matrices, wireframe references, and extensive requirement tables.

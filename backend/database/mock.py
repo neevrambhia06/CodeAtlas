@@ -1,0 +1,3 @@
+MOCK_USERS_DB = {}
+MOCK_JOBS = {}
+MOCK_REPOS = {}

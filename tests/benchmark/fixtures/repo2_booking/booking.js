@@ -1,0 +1,1 @@
+app.get('/booking', (req, res) => {})

@@ -1,0 +1,6 @@
+{
+  "domain": "booking/reservations",
+  "required_gaps": [
+    "Logic Gap: Missing Booking Cancellation"
+  ]
+}

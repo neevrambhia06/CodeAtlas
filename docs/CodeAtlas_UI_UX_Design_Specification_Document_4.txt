@@ -1,0 +1,199 @@
+CodeAtlas – UI/UX Design Specification
+Version: 1.0
+Purpose: Define the complete UI/UX design system, interface specifications, screen inventory, component library, and responsive behavior for the CodeAtlas Software Reasoning Engine.
+1. Design Philosophy
+CodeAtlas follows a modern, premium, light-themed design language focused on clarity, software visualization, and explainable AI. The interface emphasizes information hierarchy, minimalism, accessibility, and developer productivity.
+2. Information Architecture
+Landing Page
+├── Product Overview
+├── Features
+├── Pricing
+├── Documentation
+└── Login
+
+Authenticated Area
+├── Dashboard
+├── Repository Upload
+├── Analysis History
+├── Capability Explorer
+├── Journey Explorer
+├── Logic Gap Explorer
+├── Reports
+└── Settings
+3. Design System
+Primary Color: #2563EB
+Secondary Color: #14B8A6
+Accent Color: #F59E0B
+
+Background: #F8FAFC
+Surface: #FFFFFF
+Card: #FFFFFF
+Border: #E5E7EB
+
+Success: #22C55E
+Warning: #F59E0B
+Error: #EF4444
+Info: #3B82F6
+4. Typography
+Display Heading: Space Grotesk Bold
+Headings: Manrope SemiBold
+Body: DM Sans Regular
+Caption: DM Sans Medium
+Buttons: Manrope Medium
+
+8-point spacing system throughout the application.
+5. Visual Language
+• Rounded cards (16px)
+• Soft shadows
+• Subtle gradients
+• Outline icons
+• Data visualizations
+• Interactive graphs
+• Smooth animations
+• Consistent spacing
+6. Layout Specification
+Desktop: 1440px
+Laptop: 1280px
+Tablet: 768px
+Mobile: 390px
+
+Grid: 12-column desktop
+8-column tablet
+4-column mobile
+7. Screen Inventory
+1. Landing Page
+2. Login
+3. Registration
+4. Dashboard
+5. Repository Upload
+6. Upload Progress
+7. Analysis Dashboard
+8. Capability Explorer
+9. Journey Explorer
+10. Logic Gap Explorer
+11. Repository History
+12. Reports
+13. Settings
+14. User Profile
+15. Organization Management
+16. Admin Dashboard
+8. Screen Specifications
+For every screen define:
+• Purpose
+• User Goal
+• Layout
+• Components
+• Navigation
+• Empty State
+• Loading State
+• Success State
+• Error State
+• Validation Rules
+9. Component Library
+Navigation
+• Navbar
+• Sidebar
+• Breadcrumb
+
+Forms
+• Inputs
+• Dropdowns
+• Search
+• Date Picker
+• Checkboxes
+
+Display
+• Cards
+• Tables
+• Charts
+• Graph Views
+• Badges
+• Tags
+
+Feedback
+• Toasts
+• Alerts
+• Loaders
+• Skeletons
+• Modals
+10. Dashboard Layout
+Top Navigation
+Left Sidebar
+Repository Summary
+Analysis Cards
+Knowledge Graph Preview
+Capability Cards
+Journey Visualization
+Logic Gap Alerts
+Recent Activity
+11. Interaction Design
+Hover animations
+Loading skeletons
+Smooth page transitions
+Expandable graphs
+Interactive nodes
+Drag-and-drop repository upload
+Animated progress indicators
+12. Responsive Behaviour
+Desktop
+• Multi-column layouts
+
+Tablet
+• Collapsible sidebar
+• Two-column cards
+
+Mobile
+• Bottom navigation
+• Single-column layout
+• Swipe gestures
+13. Accessibility
+WCAG 2.1 AA
+Keyboard Navigation
+Screen Reader Support
+High Contrast
+Accessible Forms
+Focus Indicators
+Semantic HTML
+14. Empty & Error States
+Empty:
+Illustration + CTA
+
+Loading:
+Skeleton placeholders
+
+Success:
+Animated confirmation
+
+Error:
+Actionable message with retry
+15. UX Principles
+Reduce cognitive load
+Progressive disclosure
+Consistency
+Minimal clicks
+Explainable AI
+Immediate feedback
+High readability
+16. Motion Guidelines
+200–300ms transitions
+Fade + slide page transitions
+Card hover elevation
+Button ripple
+Graph zoom animations
+Modal fade animations
+17. Design Tokens
+Spacing: 8,16,24,32,48
+Radius: 8,12,16
+Shadow: Soft elevation
+Icon Size: 20–24px
+Button Height: 44px
+Input Height: 48px
+18. Future UI Enhancements
+Interactive architecture map
+3D repository visualization
+AI assistant sidebar
+Collaborative commenting
+Real-time multi-user sessions
+Custom dashboard widgets
+Appendix
+This UI/UX Design Specification establishes the foundational visual language and interaction model for the CodeAtlas MVP. A production-grade version would additionally include Figma references, wireframes, high-fidelity mockups, design tokens in JSON format, accessibility audits, component variants, and detailed interaction specifications.

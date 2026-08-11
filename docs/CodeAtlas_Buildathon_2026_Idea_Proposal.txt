@@ -1,0 +1,53 @@
+Buildathon 2026 – Idea Proposal
+Project Title: CodeAtlas – Software Reasoning Engine
+Tagline: Software that understands software.
+Problem Statement
+Modern software systems are increasingly difficult to understand as they grow. Developers spend days or weeks exploring source code, APIs, databases and outdated documentation before understanding how a system actually works. Existing AI tools help write, review or document code, but they do not explain what the software does as a complete business system, how users interact with it, or what important business workflows are missing.
+Proposed Solution
+CodeAtlas introduces a new category called Software Reasoning. Instead of analysing source code line by line, it reconstructs the software's business architecture by identifying implemented capabilities, rebuilding end-to-end user journeys, and detecting missing business logic from a repository (ZIP or Git).
+Core Features
+• Capability Intelligence – Detects business capabilities such as Authentication, Payments, Booking, Inventory, Notifications and Analytics.
+• Journey Reconstruction – Builds complete user journeys by connecting frontend, backend, APIs and database relationships.
+• Logic Gap Detection – Reasons about missing workflows such as password recovery, refunds, booking cancellation or payment failure handling.
+Innovation / USP
+CodeAtlas is not another AI coding assistant. It introduces Software Reasoning—a new category focused on understanding software rather than generating code.
+Target Users
+Software Developers, Architects, Engineering Teams, Startups, Enterprise Teams, Students, Open Source Contributors and Legacy Modernization Teams.
+Technology Stack
+Frontend: Next.js, React, Tailwind CSS, React Flow
+Backend: FastAPI (Python)
+Parsing: Tree-sitter, GitPython, Custom Repository Parser
+AI: OpenRouter API, GPT-5.5 / Claude Sonnet, Custom Software Reasoning Pipeline
+Database: Supabase (PostgreSQL)
+Expected Impact
+Reduce onboarding time, simplify maintenance, improve software understanding, identify missing business workflows early and accelerate modernization.
+Future Scope
+Enterprise software intelligence, architecture reviews, cross-repository reasoning, due diligence, compliance analysis and engineering intelligence dashboards.
+Software Reasoning Pipeline
+Repository Upload
+        ↓
+Repository Parsing
+        ↓
+Knowledge Extraction
+        ↓
+Project Knowledge Graph
+        ↓
+Software Reasoning Engine
+        ↓
+ ┌──────────────────────────────────────────────┐
+ │ Capability Intelligence                      │
+ │ Journey Reconstruction                       │
+ │ Logic Gap Detection                          │
+ └──────────────────────────────────────────────┘
+        ↓
+Interactive Dashboard
+
+Sample Output
+
+[TABLE]
+Detected | Reasoned Insight
+Application | E-Commerce Platform
+Capabilities | Authentication, Cart, Checkout, Payments
+Journey | Login → Browse → Cart → Checkout → Payment
+Logic Gaps | Refund Workflow Missing; Password Recovery Missing
+[/TABLE]

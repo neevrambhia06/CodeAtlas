@@ -1,0 +1,132 @@
+.depth-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: var(--dc-perspective, 1400px);
+  perspective-origin: 50% 50%;
+  touch-action: pan-y;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.depth-carousel:active {
+  cursor: grabbing;
+}
+
+.depth-carousel:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.depth-carousel__stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.depth-carousel__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  overflow: hidden;
+  background: #2F4156;
+  border: 1px solid rgba(200, 217, 230, 0.15);
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.45),
+    0 8px 20px -10px rgba(0, 0, 0, 0.35);
+  will-change: transform, opacity, filter;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.depth-carousel__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.depth-carousel__tint {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.depth-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2100;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 217, 230, 0.2);
+  background: rgba(47, 65, 86, 0.6);
+  backdrop-filter: blur(8px);
+  color: #C8D9E6;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.depth-carousel__arrow:hover {
+  background: rgba(86, 124, 141, 0.5);
+  border-color: rgba(200, 217, 230, 0.4);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.depth-carousel__arrow--prev {
+  left: 8px;
+}
+
+.depth-carousel__arrow--next {
+  right: 8px;
+}
+
+.depth-carousel__dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2100;
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(47, 65, 86, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.depth-carousel__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(200, 217, 230, 0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.depth-carousel__dot.is-active {
+  background: #C8D9E6;
+  transform: scale(1.3);
+}
+
+.depth-carousel__dot:hover:not(.is-active) {
+  background: rgba(200, 217, 230, 0.6);
+}

@@ -1,0 +1,14 @@
+{
+  "name": "codeatlas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "husky": "^9.0.0",
+    "prettier": "^3.0.3"
+  }
+}
