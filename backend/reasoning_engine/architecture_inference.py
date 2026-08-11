@@ -6,6 +6,7 @@ from .llm_provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 
+
 class ArchitectureInferenceEngine:
     def __init__(self, knowledge_graph: dict):
         self.kg = knowledge_graph
@@ -53,27 +54,37 @@ class ArchitectureInferenceEngine:
            - "children": An array of IDs of nodes that this node contains (e.g., FRONTEND might contain MODULE_1).
            - "dependencies": An array of IDs of nodes that this node depends on (e.g., API might depend on DATABASE).
         """
-        
+
         # Prepare context by extracting real entities (filtering out heavy AST details)
         # We only pass top-level interesting nodes to avoid overloading LLM.
         context_nodes = []
         for n in self.kg.get("nodes", []):
-            if n.get("type") in ["project", "route", "database", "external_service", "module", "component", "service"]:
-                context_nodes.append({
-                    "id": n.get("id"),
-                    "label": n.get("label", n.get("name")),
-                    "type": n.get("type"),
-                    "path": n.get("path", "")
-                })
-        
+            if n.get("type") in [
+                "project",
+                "route",
+                "database",
+                "external_service",
+                "module",
+                "component",
+                "service",
+            ]:
+                context_nodes.append(
+                    {
+                        "id": n.get("id"),
+                        "label": n.get("label", n.get("name")),
+                        "type": n.get("type"),
+                        "path": n.get("path", ""),
+                    }
+                )
+
         context_kg = {"nodes": context_nodes, "edges": self.kg.get("edges", [])}
-        
+
         try:
             llm_response = await LLMProvider.call_llm(prompt, context_kg)
         except Exception as e:
             logger.error(f"Error inferring architecture: {e}")
             return []
-            
+
         nodes = []
         # LLM might return the array directly or inside a key
         raw_nodes = []
@@ -81,7 +92,7 @@ class ArchitectureInferenceEngine:
             raw_nodes = llm_response
         elif isinstance(llm_response, dict):
             raw_nodes = llm_response.get("nodes", llm_response.get("architecture", []))
-            
+
         for rn in raw_nodes:
             evidence_list = []
             for ev in rn.get("evidence", []):
@@ -91,10 +102,10 @@ class ArchitectureInferenceEngine:
                         source_type=ev.get("source_type", "UNKNOWN"),
                         reference=ev.get("reference", "Unknown"),
                         snippet_or_description=ev.get("snippet_or_description", ""),
-                        reasoning_type="LLM_INFERRED"
+                        reasoning_type="LLM_INFERRED",
                     )
                 )
-                
+
             nodes.append(
                 ArchitectureNode(
                     id=rn.get("id", str(uuid.uuid4())),
@@ -104,8 +115,8 @@ class ArchitectureInferenceEngine:
                     confidence=rn.get("confidence", "MEDIUM"),
                     evidence=evidence_list,
                     children=rn.get("children", []),
-                    dependencies=rn.get("dependencies", [])
+                    dependencies=rn.get("dependencies", []),
                 )
             )
-            
+
         return nodes

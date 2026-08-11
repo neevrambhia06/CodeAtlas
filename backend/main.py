@@ -58,7 +58,9 @@ from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI(title="CodeAtlas API", version="0.1.0")
 
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("JWT_SECRET", "local_dev_jwt_secret_12345"))
+app.add_middleware(
+    SessionMiddleware, secret_key=os.getenv("JWT_SECRET", "local_dev_jwt_secret_12345")
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -122,10 +124,16 @@ from database.connection import get_db
 from sqlalchemy import text
 from knowledge_graph.neo4j_client import get_neo4j_client
 
+
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
-    health_status = {"status": "ok", "version": "0.1.0", "postgres": "unknown", "neo4j": "unknown"}
-    
+    health_status = {
+        "status": "ok",
+        "version": "0.1.0",
+        "postgres": "unknown",
+        "neo4j": "unknown",
+    }
+
     # Check Postgres
     try:
         db.execute(text("SELECT 1"))
@@ -133,7 +141,7 @@ def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         health_status["postgres"] = f"error: {str(e)}"
         health_status["status"] = "degraded"
-        
+
     # Check Neo4j
     try:
         neo4j_client = get_neo4j_client()
@@ -143,9 +151,13 @@ def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         health_status["neo4j"] = f"error: {str(e)}"
         health_status["status"] = "degraded"
-        
+
     # If both failed, return 503 instead of 200
-    if health_status["status"] == "degraded" and health_status["postgres"] != "ok" and health_status["neo4j"] != "ok":
+    if (
+        health_status["status"] == "degraded"
+        and health_status["postgres"] != "ok"
+        and health_status["neo4j"] != "ok"
+    ):
         return JSONResponse(status_code=503, content=health_status)
-        
+
     return health_status

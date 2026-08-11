@@ -40,14 +40,14 @@ def validate_finding(finding: Any, graph_data: dict) -> bool:
     # 1. Build a fast lookup set of valid entities from the canonical graph
     valid_ids = set()
     valid_names_paths = set()
-    
+
     for node in graph_data.get("nodes", []):
         valid_ids.add(str(node.get("id")))
         if "path" in node:
             valid_names_paths.add(str(node["path"]).lower())
         if "label" in node:
             valid_names_paths.add(str(node["label"]).lower())
-            
+
     for edge in graph_data.get("edges", []):
         if "id" in edge:
             valid_ids.add(str(edge["id"]))
@@ -65,7 +65,10 @@ def validate_finding(finding: Any, graph_data: dict) -> bool:
         return False
 
     # Check for early exit states
-    if getattr(finding, "status", None) in ("Insufficient-Evidence", "INSUFFICIENT_EVIDENCE"):
+    if getattr(finding, "status", None) in (
+        "Insufficient-Evidence",
+        "INSUFFICIENT_EVIDENCE",
+    ):
         return True
 
     finding_category = getattr(finding, "category", type(finding).__name__)
@@ -73,66 +76,88 @@ def validate_finding(finding: Any, graph_data: dict) -> bool:
     # 2. Evidence Validation (Phase 7 rule: evidence must correspond to actual entity)
     evidence_list = getattr(finding, "evidence", [])
     if not evidence_list or len(evidence_list) == 0:
-        if hasattr(finding, "checkedLocations") and getattr(finding, "checkedLocations"):
+        if hasattr(finding, "checkedLocations") and getattr(
+            finding, "checkedLocations"
+        ):
             pass  # Gap findings can have no evidence if they explicitly list checked locations
         elif type(finding).__name__ == "ArchitectureNode":
             pass  # Architecture Map nodes can be DERIVED from canonical entities
         else:
-            logger.warning(f"Validation failed: Finding {finding_category} has no evidence.")
+            logger.warning(
+                f"Validation failed: Finding {finding_category} has no evidence."
+            )
             return False
-            
+
     valid_evidence = []
     for ev in evidence_list:
         if not ev.reference:
-            logger.warning(f"Validation failed: Evidence in {finding_category} lacks a reference.")
-            if type(finding).__name__ != "ArchitectureNode": return False
+            logger.warning(
+                f"Validation failed: Evidence in {finding_category} lacks a reference."
+            )
+            if type(finding).__name__ != "ArchitectureNode":
+                return False
             continue
         # Skip strict ref checking for ABSENCE_CHECKs
         if getattr(ev, "source_type", None) == "ABSENCE_CHECK":
             valid_evidence.append(ev)
             continue
         if not is_valid_ref(ev.reference):
-            logger.warning(f"Validation failed: Hallucinated evidence reference '{ev.reference}' in {finding_category}")
-            if type(finding).__name__ != "ArchitectureNode": return False
+            logger.warning(
+                f"Validation failed: Hallucinated evidence reference '{ev.reference}' in {finding_category}"
+            )
+            if type(finding).__name__ != "ArchitectureNode":
+                return False
             continue
         valid_evidence.append(ev)
-        
-    if type(finding).__name__ == "ArchitectureNode" and len(valid_evidence) != len(evidence_list):
+
+    if type(finding).__name__ == "ArchitectureNode" and len(valid_evidence) != len(
+        evidence_list
+    ):
         finding.evidence = valid_evidence
-            
+
     # 3. Entity Consistency Validation (Phase 7 rule: referenced entities must exist)
     # Check relatedEntities, entryPoints, dependencies, children
     lists_to_check = ["relatedEntities", "entryPoints", "dependencies", "children"]
     for list_attr in lists_to_check:
         # Architecture nodes reference each other in children/dependencies, skip them here
-        if type(finding).__name__ == "ArchitectureNode" and list_attr in ["children", "dependencies"]:
+        if type(finding).__name__ == "ArchitectureNode" and list_attr in [
+            "children",
+            "dependencies",
+        ]:
             continue
         ref_list = getattr(finding, list_attr, [])
         for ref in ref_list:
             if not is_valid_ref(ref):
-                logger.warning(f"Validation failed: Hallucinated entity reference '{ref}' in {finding_category}.{list_attr}")
+                logger.warning(
+                    f"Validation failed: Hallucinated entity reference '{ref}' in {finding_category}.{list_attr}"
+                )
                 return False
 
     # For JourneyFinding, we also need to check its steps
     if hasattr(finding, "steps"):
         for step in finding.steps:
             if step.entityId and not is_valid_ref(step.entityId):
-                logger.warning(f"Validation failed: Hallucinated step entityId '{step.entityId}' in Journey")
+                logger.warning(
+                    f"Validation failed: Hallucinated step entityId '{step.entityId}' in Journey"
+                )
                 return False
             for step_ev in getattr(step, "evidence", []):
                 if step_ev.reference and not is_valid_ref(step_ev.reference):
-                    logger.warning(f"Validation failed: Hallucinated evidence reference '{step_ev.reference}' in Journey Step")
+                    logger.warning(
+                        f"Validation failed: Hallucinated evidence reference '{step_ev.reference}' in Journey Step"
+                    )
                     return False
 
     # 4. Confidence Score Validation
     conf = getattr(finding, "confidence_score", None)
     if conf is not None:
         if not (0.0 <= conf <= 1.0):
-            logger.warning(f"Validation failed: Finding {finding_category} has invalid confidence {conf}.")
+            logger.warning(
+                f"Validation failed: Finding {finding_category} has invalid confidence {conf}."
+            )
             return False
-            
-    return True
 
+    return True
 
 
 class JobRunner:
@@ -174,7 +199,7 @@ class JobRunner:
 
                 domain_engine = DomainInferenceEngine(graph_data)
                 domain_inferences = await domain_engine.infer_domain(job_id)
-                
+
                 arch_engine = ArchitectureInferenceEngine(graph_data)
                 architecture_nodes = await arch_engine.infer_architecture(job_id)
 
@@ -194,10 +219,18 @@ class JobRunner:
                 )
 
                 # Validate findings (discard invalid ones)
-                valid_domains = [d for d in domain_inferences if validate_finding(d, graph_data)]
-                valid_arch = [a for a in architecture_nodes if validate_finding(a, graph_data)]
-                valid_caps = [c for c in capabilities if validate_finding(c, graph_data)]
-                valid_journeys = [j for j in journeys if validate_finding(j, graph_data)]
+                valid_domains = [
+                    d for d in domain_inferences if validate_finding(d, graph_data)
+                ]
+                valid_arch = [
+                    a for a in architecture_nodes if validate_finding(a, graph_data)
+                ]
+                valid_caps = [
+                    c for c in capabilities if validate_finding(c, graph_data)
+                ]
+                valid_journeys = [
+                    j for j in journeys if validate_finding(j, graph_data)
+                ]
                 valid_gaps = [g for g in gaps if validate_finding(g, graph_data)]
 
                 # Persist findings to DB

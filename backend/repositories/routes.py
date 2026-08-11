@@ -150,20 +150,31 @@ def upload_repository(
 
 @router.get("/")
 @limiter.limit("60/minute")
-def get_repositories(request: Request, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    repos = db.query(Repository.repo_id, Repository.name).offset(skip).limit(limit).all()
+def get_repositories(
+    request: Request, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)
+):
+    repos = (
+        db.query(Repository.repo_id, Repository.name).offset(skip).limit(limit).all()
+    )
     return {"repositories": [{"repo_id": r.repo_id, "name": r.name} for r in repos]}
 
 
 @router.get("/jobs")
 @limiter.limit("60/minute")
-def get_all_jobs(request: Request, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    jobs = db.query(
-        AnalysisJob.job_id,
-        AnalysisJob.repo_id,
-        AnalysisJob.project_name,
-        AnalysisJob.status,
-    ).offset(skip).limit(limit).all()
+def get_all_jobs(
+    request: Request, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)
+):
+    jobs = (
+        db.query(
+            AnalysisJob.job_id,
+            AnalysisJob.repo_id,
+            AnalysisJob.project_name,
+            AnalysisJob.status,
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return {
         "jobs": [
             {

@@ -7,7 +7,9 @@ class Evidence(BaseModel):
     source_type: str
     reference: str
     snippet_or_description: str
-    reasoning_type: Literal["DIRECT", "INFERRED", "HEURISTIC", "LLM_INFERRED"] = "DIRECT"
+    reasoning_type: Literal["DIRECT", "INFERRED", "HEURISTIC", "LLM_INFERRED"] = (
+        "DIRECT"
+    )
 
     # New optional fields for enhanced reasoning
     title: Optional[str] = None
@@ -65,7 +67,9 @@ class Finding(BaseModel):
     confidence_score: float = Field(ge=0.0, le=1.0)
     reasoning_summary: str
     evidence: List[Evidence]
-    status: Literal["Confirmed", "Low-Confidence", "Insufficient-Evidence", "Partially Implemented"]
+    status: Literal[
+        "Confirmed", "Low-Confidence", "Insufficient-Evidence", "Partially Implemented"
+    ]
 
     @model_validator(mode="after")
     def validate_never_guess_rule(self) -> "Finding":
@@ -86,13 +90,15 @@ class CapabilityFinding(BaseModel):
     relatedEntities: List[str] = []
     entryPoints: List[str] = []
     dependencies: List[str] = []
-    implementationStatus: Literal["CONFIRMED", "PARTIALLY_IMPLEMENTED", "INFERRED", "INSUFFICIENT_EVIDENCE"]
-    
+    implementationStatus: Literal[
+        "CONFIRMED", "PARTIALLY_IMPLEMENTED", "INFERRED", "INSUFFICIENT_EVIDENCE"
+    ]
+
     # Keeping old properties as properties or fields just in case job_runner uses them
     @property
     def finding_id(self):
         return self.id
-        
+
     @property
     def status(self):
         return self.implementationStatus
@@ -103,8 +109,10 @@ class CapabilityFinding(BaseModel):
 
     @property
     def confidence_score(self):
-        if self.confidence == "HIGH": return 0.9
-        if self.confidence == "MEDIUM": return 0.6
+        if self.confidence == "HIGH":
+            return 0.9
+        if self.confidence == "MEDIUM":
+            return 0.6
         return 0.3
 
 
@@ -112,7 +120,18 @@ class JourneyStep(BaseModel):
     id: str
     label: str
     entityId: Optional[str] = None
-    stepType: Literal["ENTRY", "UI", "ACTION", "FUNCTION", "API", "DATABASE", "EXTERNAL_SERVICE", "REDIRECT", "DECISION", "EXIT"]
+    stepType: Literal[
+        "ENTRY",
+        "UI",
+        "ACTION",
+        "FUNCTION",
+        "API",
+        "DATABASE",
+        "EXTERNAL_SERVICE",
+        "REDIRECT",
+        "DECISION",
+        "EXIT",
+    ]
     evidence: List[Evidence] = []
     confidence: Literal["VERIFIED", "INFERRED"]
     nextSteps: List[str] = []  # Allows branching logic
@@ -122,7 +141,19 @@ class GapFinding(BaseModel):
     id: str
     title: str
     severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
-    category: Literal["SECURITY", "ARCHITECTURE", "DATA", "API", "AUTHENTICATION", "AUTHORIZATION", "ERROR_HANDLING", "VALIDATION", "PERFORMANCE", "MAINTAINABILITY", "FUNCTIONAL"]
+    category: Literal[
+        "SECURITY",
+        "ARCHITECTURE",
+        "DATA",
+        "API",
+        "AUTHENTICATION",
+        "AUTHORIZATION",
+        "ERROR_HANDLING",
+        "VALIDATION",
+        "PERFORMANCE",
+        "MAINTAINABILITY",
+        "FUNCTIONAL",
+    ]
     description: str
     impact: str = ""
     recommendation: str = ""
@@ -131,29 +162,43 @@ class GapFinding(BaseModel):
     checkedAreas: List[str] = []
     reasoning: str = ""
     confidence: Literal["HIGH", "MEDIUM", "LOW"]
-    
+
     # Backwards compatibility properties (UI and job_runner)
     @property
-    def finding_id(self): return self.id
+    def finding_id(self):
+        return self.id
+
     @property
-    def status(self): return "Confirmed" if self.confidence == "HIGH" else "Low-Confidence"
+    def status(self):
+        return "Confirmed" if self.confidence == "HIGH" else "Low-Confidence"
+
     @property
     def confidence_score(self):
-        if self.confidence == "HIGH": return 0.9
-        if self.confidence == "MEDIUM": return 0.6
+        if self.confidence == "HIGH":
+            return 0.9
+        if self.confidence == "MEDIUM":
+            return 0.6
         return 0.3
-    @property
-    def evidence(self): return self.evidenceTraces
-    @property
-    def checkedLocations(self): return self.checkedAreas
-    @property
-    def rationale(self): return self.impact
-    @property
-    def remediation(self): return self.recommendation
-    @property
-    def reasoning_summary(self): return self.reasoning
-    
 
+    @property
+    def evidence(self):
+        return self.evidenceTraces
+
+    @property
+    def checkedLocations(self):
+        return self.checkedAreas
+
+    @property
+    def rationale(self):
+        return self.impact
+
+    @property
+    def remediation(self):
+        return self.recommendation
+
+    @property
+    def reasoning_summary(self):
+        return self.reasoning
 
 
 class JourneyFinding(BaseModel):
@@ -168,17 +213,19 @@ class JourneyFinding(BaseModel):
     @property
     def finding_id(self):
         return self.id
-        
+
     @property
     def category(self):
         return f"Journey: {self.name}"
 
     @property
     def confidence_score(self):
-        if self.confidence == "HIGH": return 0.9
-        if self.confidence == "MEDIUM": return 0.6
+        if self.confidence == "HIGH":
+            return 0.9
+        if self.confidence == "MEDIUM":
+            return 0.6
         return 0.3
-        
+
     @property
     def evidence(self):
         # job_runner checks length of evidence, we can return the steps as a proxy or extract inner evidence
@@ -191,33 +238,47 @@ class JourneyFinding(BaseModel):
 class ArchitectureNode(BaseModel):
     id: str
     name: str
-    type: Literal["PROJECT", "APPLICATION", "FRONTEND", "BACKEND", "MODULE", "DOMAIN", "SERVICE", "API", "DATABASE", "EXTERNAL_SERVICE", "OTHER"]
+    type: Literal[
+        "PROJECT",
+        "APPLICATION",
+        "FRONTEND",
+        "BACKEND",
+        "MODULE",
+        "DOMAIN",
+        "SERVICE",
+        "API",
+        "DATABASE",
+        "EXTERNAL_SERVICE",
+        "OTHER",
+    ]
     description: str
     confidence: Literal["HIGH", "MEDIUM", "LOW"]
     evidence: List[Evidence] = []
-    children: List[str] = [] # IDs of child nodes
-    dependencies: List[str] = [] # IDs of nodes this node depends on
-    
+    children: List[str] = []  # IDs of child nodes
+    dependencies: List[str] = []  # IDs of nodes this node depends on
+
     # Optional enrichments (added post-inference)
     relatedCapabilities: List[str] = []
     relatedJourneys: List[str] = []
     relatedGaps: List[str] = []
-    
+
     # Keeping old properties for job_runner fallback if needed
     @property
     def finding_id(self):
         return self.id
-        
+
     @property
     def category(self):
         return f"ArchitectureNode: {self.name}"
-        
+
     @property
     def status(self):
         return "Confirmed" if self.confidence == "HIGH" else "Low-Confidence"
-        
+
     @property
     def confidence_score(self):
-        if self.confidence == "HIGH": return 0.9
-        if self.confidence == "MEDIUM": return 0.6
+        if self.confidence == "HIGH":
+            return 0.9
+        if self.confidence == "MEDIUM":
+            return 0.6
         return 0.3

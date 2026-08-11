@@ -49,20 +49,24 @@ class KnowledgeGraphBuilder:
         # Convert entities to graph nodes
         for entity in entities:
             # Layout positions for React Flow will be calculated later
-            nodes.append({
-                "id": entity["id"],
-                "label": entity["name"],
-                "type": entity["type"],
-                "entity": entity  # Store full entity data for reasoning
-            })
+            nodes.append(
+                {
+                    "id": entity["id"],
+                    "label": entity["name"],
+                    "type": entity["type"],
+                    "entity": entity,  # Store full entity data for reasoning
+                }
+            )
 
         for rel in relationships:
-            edges.append({
-                "source": rel["source_id"],
-                "target": rel["target_id"],
-                "type": rel["type"],
-                "confidence": rel.get("confidence", 1.0)
-            })
+            edges.append(
+                {
+                    "source": rel["source_id"],
+                    "target": rel["target_id"],
+                    "type": rel["type"],
+                    "confidence": rel.get("confidence", 1.0),
+                }
+            )
 
         # Framework and language nodes as metadata links
         for fw in metadata.get("frameworks", []):
@@ -73,12 +77,14 @@ class KnowledgeGraphBuilder:
         for lang in metadata.get("languages", []):
             l_id = f"LANG_{lang}"
             nodes.append({"id": l_id, "label": lang, "type": "language"})
-            edges.append({"source": "project_root", "target": l_id, "type": "WRITTEN_IN"})
+            edges.append(
+                {"source": "project_root", "target": l_id, "type": "WRITTEN_IN"}
+            )
 
         # Layout positions for React Flow (circle layout for MVP)
         center_x, center_y = 400, 300
         count = len(nodes)
-        
+
         # Scale radius dynamically to prevent overlapping
         # Assuming ~80px minimum circumference spacing per node
         radius = max(250, (count * 80) / (2 * math.pi))

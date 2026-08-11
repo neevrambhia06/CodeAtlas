@@ -24,13 +24,11 @@ pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 # Google OAuth Setup
 oauth = OAuth()
 oauth.register(
-    name='google',
-    client_id=os.getenv('GOOGLE_CLIENT_ID', 'dummy_client_id'),
-    client_secret=os.getenv('GOOGLE_CLIENT_SECRET', 'dummy_secret'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID", "dummy_client_id"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET", "dummy_secret"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
 )
 
 # Simple in-memory rate limiter for emails to supplement IP rate limiting
@@ -134,7 +132,7 @@ def login(request: Request, user: UserLoginSchema, db: Session = Depends(get_db)
 async def google_login(request: Request):
     # redirect_uri must match the callback route
     # Using the request URL to dynamically generate callback
-    redirect_uri = request.url_for('google_callback')
+    redirect_uri = request.url_for("google_callback")
     # If the app is behind proxy or we want to hardcode for local:
     if os.getenv("ENV") == "production":
         # Force https in production if needed, but request.url_for should handle it with proper proxy headers
@@ -147,17 +145,19 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     try:
         token = await oauth.google.authorize_access_token(request)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"OAuth authorization failed: {str(e)}")
-    
-    user_info = token.get('userinfo')
+        raise HTTPException(
+            status_code=400, detail=f"OAuth authorization failed: {str(e)}"
+        )
+
+    user_info = token.get("userinfo")
     if not user_info:
         raise HTTPException(status_code=400, detail="Failed to fetch user info")
-        
+
     if not user_info.get("email_verified"):
         raise HTTPException(status_code=400, detail="Unverified email")
-        
-    normalized_email = user_info['email'].strip().lower()
-    
+
+    normalized_email = user_info["email"].strip().lower()
+
     db_user = db.query(User).filter(User.email == normalized_email).first()
     if not db_user:
         # Create new user
@@ -166,26 +166,30 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         db_user = User(
             user_id=user_id,
             email=normalized_email,
-            name=user_info.get('name', ''),
-            password='OAUTH_NO_PASSWORD',
-            role='Developer',
-            auth_provider='google'
+            name=user_info.get("name", ""),
+            password="OAUTH_NO_PASSWORD",
+            role="Developer",
+            auth_provider="google",
         )
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        log_audit_event(user_id, "register", {"email": normalized_email, "provider": "google"})
+        log_audit_event(
+            user_id, "register", {"email": normalized_email, "provider": "google"}
+        )
     else:
         # Link existing account if not already google
-        if getattr(db_user, 'auth_provider', 'email') == 'email':
-            db_user.auth_provider = 'google'
+        if getattr(db_user, "auth_provider", "email") == "email":
+            db_user.auth_provider = "google"
             db.commit()
 
     token_data = sign_jwt(db_user.user_id, db_user.role)
-    log_audit_event(db_user.user_id, "login", {"email": normalized_email, "provider": "google"})
-    
+    log_audit_event(
+        db_user.user_id, "login", {"email": normalized_email, "provider": "google"}
+    )
+
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    
+
     # We redirect the user back to the frontend dashboard.
     # To pass the token and user details to frontend without cookies, we pass them as URL hash parameters.
     # The frontend will parse them on the dashboard and store them.
