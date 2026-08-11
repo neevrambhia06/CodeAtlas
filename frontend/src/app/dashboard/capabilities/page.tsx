@@ -25,7 +25,7 @@ export default function CapabilityExplorer() {
         if (!jobsRes || !jobsRes.ok) throw new Error('Backend server is offline or unreachable');
         const jobsData = await jobsRes.json();
         
-        let activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
+        const activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
 
         const latestJob = activeJobId 
           ? jobsData.jobs.find((j: any) => j.job_id === activeJobId)
@@ -147,7 +147,7 @@ export default function CapabilityExplorer() {
     const actionList = Array.from(actions).slice(0, 4); // Take max 4 for summary
     
     // Better explanation
-    let explanation = cap.description || cap.reasoning_summary || `${capName} functionality was inferred from ${evidence.length} components.`;
+    const explanation = cap.description || cap.reasoning_summary || `${capName} functionality was inferred from ${evidence.length} components.`;
     
     // Arrays for display
     const entryPoints = cap.entryPoints || [];

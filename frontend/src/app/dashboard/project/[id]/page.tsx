@@ -109,7 +109,7 @@ export default function ProjectDashboard() {
   const uniqueModules = new Set(allEvidence.map(e => e.reference.split(/[\/\\]/)[0]).filter(m => m && m !== '.'));
   
   let highRiskCount = 0;
-  let gapSeverities = { critical: 0, high: 0, medium: 0, low: 0 };
+  const gapSeverities = { critical: 0, high: 0, medium: 0, low: 0 };
   
   gaps.forEach(g => {
     const title = (g.category || '').toLowerCase();

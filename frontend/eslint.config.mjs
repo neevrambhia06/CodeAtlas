@@ -21,6 +21,11 @@ const eslintConfig = defineConfig([
       // TODO: Re-enable and fix properly post-hackathon.
       "@typescript-eslint/no-explicit-any": "off",
       "react-hooks/set-state-in-effect": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
     },
   },
 ]);

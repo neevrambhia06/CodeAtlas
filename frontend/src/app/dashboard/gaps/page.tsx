@@ -23,7 +23,7 @@ export default function LogicGapExplorer() {
         if (!jobsRes || !jobsRes.ok) throw new Error('Backend server is offline or unreachable');
         const jobsData = await jobsRes.json();
         
-        let activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
+        const activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
 
         const latestJob = activeJobId 
           ? jobsData.jobs.find((j: any) => j.job_id === activeJobId)
@@ -98,7 +98,7 @@ export default function LogicGapExplorer() {
     }
 
     // 3. Severity
-    let severity = gap.severity ? gap.severity.charAt(0).toUpperCase() + gap.severity.slice(1).toLowerCase() : 'Low';
+    const severity = gap.severity ? gap.severity.charAt(0).toUpperCase() + gap.severity.slice(1).toLowerCase() : 'Low';
     let severityIcon = <Info size={16} />;
     let severityColor = 'text-blue-600';
     let borderColor = 'border-blue-200';
@@ -126,7 +126,7 @@ export default function LogicGapExplorer() {
 
     // 5. Affected Components (Architecture Areas)
     const files = new Set<string>();
-    let components = new Set<string>();
+    const components = new Set<string>();
     
     const evidenceTraces = gap.evidenceTraces || gap.evidence || [];
     evidenceTraces.forEach((e: any) => {

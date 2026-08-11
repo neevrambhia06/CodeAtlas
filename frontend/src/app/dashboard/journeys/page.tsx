@@ -21,7 +21,7 @@ export default function JourneyExplorer() {
         if (!jobsRes || !jobsRes.ok) throw new Error('Backend server is offline or unreachable');
         const jobsData = await jobsRes.json();
         
-        let activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
+        const activeJobId = typeof window !== 'undefined' ? localStorage.getItem('activeJobId') : null;
 
         const latestJob = activeJobId 
           ? jobsData.jobs.find((j: any) => j.job_id === activeJobId)
