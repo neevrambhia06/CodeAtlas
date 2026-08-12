@@ -1,7 +1,7 @@
 import uuid
 import logging
 from typing import List
-from models.core import ArchitectureNode, Evidence
+from models.core import ArchitectureNode, Evidence, ArchitectureRelationship
 from .llm_provider import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -13,74 +13,85 @@ class ArchitectureInferenceEngine:
 
     async def infer_architecture(self, job_id: str) -> List[ArchitectureNode]:
         prompt = """
-        Analyze the repository entities and extract a high-level, hierarchical, semantic Architecture Map.
-        
-        DO NOT recreate the giant repository Knowledge Graph showing every file.
-        Use semantic architectural entities.
-        
-        Preferred hierarchy:
-        PROJECT
-        ↓
-        APPLICATION / FRONTEND / BACKEND
-        ↓
-        MODULE / DOMAIN
-        ↓
-        SERVICE / API
-        ↓
-        DATABASE / EXTERNAL SERVICE
-        
-        The exact entities must be inferred from repository evidence provided in the context.
-        Architecture relationships must be evidence-backed.
-        
+        Analyze the repository entities and extract an accurate, evidence-backed Semantic Architecture Map.
+
+        CORE PRINCIPLE:
+        Architecture must be inferred from structural evidence. Do not assume generic template structures.
+
+        STEP 1 — DISCOVER ARCHITECTURAL LAYERS
+        Identify actual applications, services, modules, packages, databases, external systems, APIs, queues/events, storage, frameworks, and major domains.
+        - A frontend-only repository should NOT display Backend, Database, or External API layers unless explicitly proven in the code.
+        - A CLI tool should not be forced into a web architecture.
+        - Do not force a layer that does not exist.
+
+        STEP 2 — SEMANTIC GROUPING
+        Group low-level files into meaningful architectural entities (e.g., 50 booking-related files -> "Booking Domain"), but ONLY when relationships support that grouping.
+        The default map should remain high-level and understandable. Prefer representing Domain/Module layers over rendering hundreds of files.
+
+        STEP 3 — RELATIONSHIPS
+        Show ONLY meaningful relationships: depends_on, calls, reads_from, writes_to, exposes, imports, publishes, consumes, integrates_with.
+        Do NOT connect everything to everything. Only connect nodes where the codebase evidence supports it.
+
+        STEP 4 — EVIDENCE & CONFIDENCE
+        Every architectural node MUST have:
+        1. Exact source files/paths supporting its existence.
+        2. A confidence score based on the available structural evidence.
+        If architecture cannot be confidently inferred, explain exactly what was found and why it remains uncertain in the description field.
+
         Phase 7 Rules (CRITICAL):
         1. You must NEVER be treated as the source of truth. Rely entirely on the provided Context Nodes and Edges.
-        2. Reject/Discard any entity that does not map back to a real file, route, table, or relation in the context. Do not invent facts.
-        3. Confidence MUST be evidence-derived.
-           - Direct mapping to a known path/module + explicit edges -> HIGH
-           - Partial implementation evidence -> MEDIUM
-           - General structural inference without explicit edges -> LOW
-        4. Every reference in `evidence[].reference`, `children[]`, and `dependencies[]` MUST exactly match a real ID or Path from the Context Nodes. Do NOT fabricate IDs.
-        
-        Output Requirements:
-        1. Limit to approximately 10–25 semantic nodes maximum.
-        2. Provide the nodes as an array of JSON objects.
-        3. Each node MUST have:
-           - "id": a unique string ID
-           - "name": Semantic name (e.g., "Frontend", "Auth Service", "Payments DB")
-           - "type": One of ["PROJECT", "APPLICATION", "FRONTEND", "BACKEND", "MODULE", "DOMAIN", "SERVICE", "API", "DATABASE", "EXTERNAL_SERVICE", "OTHER"]
-           - "description": A concise description of the node's purpose.
-           - "confidence": "HIGH", "MEDIUM", or "LOW"
-           - "evidence": An array of evidence objects (with "source_type", "reference", "snippet_or_description")
-           - "children": An array of IDs of nodes that this node contains (e.g., FRONTEND might contain MODULE_1).
-           - "dependencies": An array of IDs of nodes that this node depends on (e.g., API might depend on DATABASE).
+        2. Every reference in `evidence[].reference` and `children[]` MUST exactly match a real ID or Path from the Context Nodes. Do NOT fabricate IDs.
         """
 
         # Prepare context by extracting real entities (filtering out heavy AST details)
-        # We only pass top-level interesting nodes to avoid overloading LLM.
         context_nodes = []
         for n in self.kg.get("nodes", []):
-            if n.get("type") in [
-                "project",
-                "route",
-                "database",
-                "external_service",
-                "module",
-                "component",
-                "service",
-            ]:
+            entity = n.get("entity", {})
+            flat_node = {**n, **entity}
+            
+            t = flat_node.get("type", "").lower()
+            if t in ["project", "route", "database", "external_service", "module", "component", "service", "api", "controller", "model"]:
                 context_nodes.append(
                     {
-                        "id": n.get("id"),
-                        "label": n.get("label", n.get("name")),
-                        "type": n.get("type"),
-                        "path": n.get("path", ""),
+                        "id": flat_node.get("id"),
+                        "label": flat_node.get("label", flat_node.get("name")),
+                        "type": flat_node.get("type"),
+                        "path": flat_node.get("file_path", flat_node.get("path", "")),
                     }
                 )
 
         context_kg = {"nodes": context_nodes, "edges": self.kg.get("edges", [])}
 
+        schema_instructions = """
+        {
+            "nodes": [
+                {
+                    "id": "String (Unique ID)",
+                    "name": "String (Semantic Name, e.g., 'Booking Domain')",
+                    "type": "PROJECT | APPLICATION | FRONTEND | BACKEND | MODULE | PACKAGE | DOMAIN | SERVICE | API | DATABASE | EXTERNAL_SERVICE | QUEUE | EVENT | STORAGE | FRAMEWORK | OTHER",
+                    "description": "String (Concise purpose. If low evidence, explain exactly what was detected and why architecture is uncertain.)",
+                    "confidence": "HIGH | MEDIUM | LOW",
+                    "evidence": [
+                        {
+                            "source_type": "String",
+                            "reference": "String (Must be real file/path)",
+                            "snippet_or_description": "String"
+                        }
+                    ],
+                    "children": ["String (IDs of child entities for drill-down)"],
+                    "relationships": [
+                        {
+                            "target_id": "String (ID of the target node)",
+                            "type": "depends_on | calls | reads_from | writes_to | exposes | imports | publishes | consumes | integrates_with"
+                        }
+                    ]
+                }
+            ]
+        }
+        """
+
         try:
-            llm_response = await LLMProvider.call_llm(prompt, context_kg)
+            llm_response = await LLMProvider.call_llm(prompt, context_kg, schema_instructions=schema_instructions)
         except Exception as e:
             logger.error(f"Error inferring architecture: {e}")
             return []
@@ -106,6 +117,22 @@ class ArchitectureInferenceEngine:
                     )
                 )
 
+            # Map relationships back to dependencies to support backwards compatibility
+            # while also preserving the specific relationship models
+            relationships = rn.get("relationships", [])
+            parsed_relationships = []
+            deps = []
+            
+            for rel in relationships:
+                tid = rel.get("target_id")
+                rtype = rel.get("type", "depends_on")
+                if tid:
+                    deps.append(tid)
+                    try:
+                        parsed_relationships.append(ArchitectureRelationship(target_id=tid, type=rtype))
+                    except:
+                        pass # Ignore if enum is slightly off
+
             nodes.append(
                 ArchitectureNode(
                     id=rn.get("id", str(uuid.uuid4())),
@@ -115,7 +142,8 @@ class ArchitectureInferenceEngine:
                     confidence=rn.get("confidence", "MEDIUM"),
                     evidence=evidence_list,
                     children=rn.get("children", []),
-                    dependencies=rn.get("dependencies", []),
+                    dependencies=list(set(deps)),
+                    relationships=parsed_relationships
                 )
             )
 

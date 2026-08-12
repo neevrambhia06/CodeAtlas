@@ -32,7 +32,23 @@ class DomainInferenceEngine:
 
         context_kg = {"nodes": context_nodes, "edges": self.kg.get("edges", [])}
 
-        llm_response = await LLMProvider.call_llm(prompt, context_kg)
+        schema_instructions = """
+        {
+            "label": "String (e.g. E-Commerce, Social Media)",
+            "confidence_score": 0.0 to 1.0,
+            "reasoning_summary": "String",
+            "status": "String (e.g. High-Confidence, Low-Confidence)",
+            "evidence": [
+                {
+                    "source_type": "String",
+                    "reference": "String (Must be real ID or Path from Context Nodes)",
+                    "snippet_or_description": "String"
+                }
+            ]
+        }
+        """
+
+        llm_response = await LLMProvider.call_llm(prompt, context_kg, schema_instructions=schema_instructions)
 
         finding = Finding(
             finding_id=str(uuid.uuid4()),

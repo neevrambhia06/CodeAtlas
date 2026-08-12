@@ -91,8 +91,9 @@ class CapabilityFinding(BaseModel):
     entryPoints: List[str] = []
     dependencies: List[str] = []
     implementationStatus: Literal[
-        "CONFIRMED", "PARTIALLY_IMPLEMENTED", "INFERRED", "INSUFFICIENT_EVIDENCE"
+        "CONFIRMED", "PARTIALLY_IMPLEMENTED", "INFERRED", "INSUFFICIENT_EVIDENCE", "NOT_DETECTED"
     ]
+    confidence_explanation: str = ""
 
     # Keeping old properties as properties or fields just in case job_runner uses them
     @property
@@ -235,6 +236,10 @@ class JourneyFinding(BaseModel):
         return all_ev
 
 
+class ArchitectureRelationship(BaseModel):
+    target_id: str
+    type: Literal["depends_on", "calls", "reads_from", "writes_to", "exposes", "imports", "publishes", "consumes", "integrates_with"]
+
 class ArchitectureNode(BaseModel):
     id: str
     name: str
@@ -244,18 +249,24 @@ class ArchitectureNode(BaseModel):
         "FRONTEND",
         "BACKEND",
         "MODULE",
+        "PACKAGE",
         "DOMAIN",
         "SERVICE",
         "API",
         "DATABASE",
         "EXTERNAL_SERVICE",
+        "QUEUE",
+        "EVENT",
+        "STORAGE",
+        "FRAMEWORK",
         "OTHER",
     ]
     description: str
     confidence: Literal["HIGH", "MEDIUM", "LOW"]
     evidence: List[Evidence] = []
     children: List[str] = []  # IDs of child nodes
-    dependencies: List[str] = []  # IDs of nodes this node depends on
+    dependencies: List[str] = []  # Fallback backward-compat
+    relationships: List[ArchitectureRelationship] = [] # specific relationships
 
     # Optional enrichments (added post-inference)
     relatedCapabilities: List[str] = []

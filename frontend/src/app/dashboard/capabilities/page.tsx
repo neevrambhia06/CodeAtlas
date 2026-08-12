@@ -147,7 +147,10 @@ export default function CapabilityExplorer() {
     const actionList = Array.from(actions).slice(0, 4); // Take max 4 for summary
     
     // Better explanation
-    const explanation = cap.description || cap.reasoning_summary || `${capName} functionality was inferred from ${evidence.length} components.`;
+    let explanation = cap.description || cap.reasoning_summary || `${capName} functionality was inferred from ${evidence.length} components.`;
+    if (cap.confidence_explanation) {
+      explanation += `\n\nConfidence Reasoning: ${cap.confidence_explanation}`;
+    }
     
     // Arrays for display
     const entryPoints = cap.entryPoints || [];
@@ -230,7 +233,7 @@ export default function CapabilityExplorer() {
 
       <div className="space-y-6">
         {capabilities
-          .filter(cap => cap.implementationStatus !== 'INSUFFICIENT_EVIDENCE' && cap.status !== 'Insufficient-Evidence')
+          .filter(cap => cap.implementationStatus !== 'INSUFFICIENT_EVIDENCE' && cap.status !== 'Insufficient-Evidence' && cap.implementationStatus !== 'NOT_DETECTED')
           .map((cap, index) => {
           const uniqueId = `cap-${index}`;
           const hasEvidence = cap.evidence && cap.evidence.length > 0;
@@ -334,7 +337,7 @@ export default function CapabilityExplorer() {
                       <span className="text-[#567C8D]">💡</span> Reasoning & Evidence
                     </h3>
                     <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5">
-                      <p className="text-sm text-[#2F4156] font-medium leading-relaxed">
+                      <p className="text-sm text-[#2F4156] font-medium leading-relaxed whitespace-pre-wrap">
                         {meta.explanation}
                       </p>
                     </div>
@@ -420,7 +423,7 @@ export default function CapabilityExplorer() {
             </div>
           );
         })}
-        {capabilities.filter(cap => cap.implementationStatus !== 'INSUFFICIENT_EVIDENCE' && cap.status !== 'Insufficient-Evidence').length === 0 && (
+        {capabilities.filter(cap => cap.implementationStatus !== 'INSUFFICIENT_EVIDENCE' && cap.status !== 'Insufficient-Evidence' && cap.implementationStatus !== 'NOT_DETECTED').length === 0 && (
           <div className="text-center py-12 bg-white text-[#567C8D] border border-dashed border-[#C8D9E6] rounded-2xl font-medium">
             CodeAtlas could not find any recognizable business capabilities.
           </div>

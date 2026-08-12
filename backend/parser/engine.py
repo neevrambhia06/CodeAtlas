@@ -7,6 +7,34 @@ from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
+CONFIG_FILES = {
+    "package.json": "JavaScript/TypeScript",
+    "pyproject.toml": "Python",
+    "requirements.txt": "Python",
+    "pom.xml": "Java",
+    "build.gradle": "Java",
+    "go.mod": "Go",
+    "Cargo.toml": "Rust",
+    "composer.json": "PHP",
+    "Gemfile": "Ruby",
+}
+
+FRAMEWORK_INDICATORS = {
+    "django": "Django",
+    "flask": "Flask",
+    "fastapi": "FastAPI",
+    "react": "React",
+    "next": "Next.js",
+    "express": "Express",
+    "spring-boot": "Spring Boot",
+    "springframework": "Spring Boot",
+    "laravel": "Laravel",
+    "rails": "Ruby on Rails",
+    "vue": "Vue",
+    "angular": "Angular",
+    "nestjs": "NestJS",
+}
+
 
 class ParserEngine:
     def __init__(self, extract_path: str):
@@ -15,8 +43,8 @@ class ParserEngine:
             "entities": [],
             "relationships": [],
             "file_tree": [],
-            "languages": set(),
-            "frameworks": set(),
+            "languages": {},
+            "frameworks": {},
             "api_routes": [],
             "dependencies": {},
             "partial_failure": False,
@@ -40,6 +68,9 @@ class ParserEngine:
             "env",
             ".next",
             "coverage",
+            "vendor",
+            ".idea",
+            ".vscode"
         }
 
         # Add project entity
@@ -67,30 +98,39 @@ class ParserEngine:
 
             for file in files:
                 full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, self.extract_path).replace(
-                    "\\", "/"
-                )
+                rel_path = os.path.relpath(full_path, self.extract_path).replace("\\", "/")
                 self.metadata["file_tree"].append(rel_path)
+
+                # Identify language by extension
+                ext = os.path.splitext(file)[1].lower()
+                lang = self._get_language_from_ext(ext)
+                if lang:
+                    self.metadata["languages"][lang] = self.metadata["languages"].get(lang, 0) + 1
+
+                # Entry point detection
+                is_entry = False
+                entry_names = {"main.tsx", "main.jsx", "index.tsx", "index.ts", "server.ts", "app.tsx", "main.py", "manage.py", "program.cs", "main.go"}
+                if file.lower() in entry_names or "app/" in rel_path.lower() or "pages/" in rel_path.lower():
+                    is_entry = True
 
                 # File entity
                 file_id = f"file:{rel_path}"
-                self.metadata["entities"].append(
-                    {
-                        "id": file_id,
-                        "type": "file",
-                        "name": file,
-                        "path": rel_path,
-                        "evidence": [
-                            {
-                                "evidence_id": str(uuid.uuid4()),
-                                "source_type": "filesystem",
-                                "reference": rel_path,
-                                "snippet_or_description": f"File exists at {rel_path}",
-                                "reasoning_type": "DIRECT",
-                            }
-                        ],
-                    }
-                )
+                file_entity = {
+                    "id": file_id,
+                    "type": "entry_point" if is_entry else "file",
+                    "name": file,
+                    "path": rel_path,
+                    "evidence": [
+                        {
+                            "evidence_id": str(uuid.uuid4()),
+                            "source_type": "filesystem",
+                            "reference": rel_path,
+                            "snippet_or_description": f"File discovered: {rel_path} (Detected as {'entry point' if is_entry else 'file'})",
+                            "reasoning_type": "DIRECT",
+                        }
+                    ],
+                }
+                self.metadata["entities"].append(file_entity)
 
                 self.metadata["relationships"].append(
                     {
@@ -102,23 +142,13 @@ class ParserEngine:
                     }
                 )
 
-                if file.endswith((".js", ".jsx", ".ts", ".tsx")):
-                    self.metadata["languages"].add(
-                        "JavaScript" if file.endswith(".js") else "TypeScript"
-                    )
-                    files_to_parse.append((full_path, rel_path, file_id))
-                elif file.endswith(".py"):
-                    self.metadata["languages"].add("Python")
-                    files_to_parse.append((full_path, rel_path, file_id))
-                elif file == "package.json":
-                    self._parse_package_json(full_path, file_id)
-                elif (
-                    file.endswith(".sql")
-                    or "schema" in file.lower()
-                    or "db" in file.lower()
-                ):
-                    self.metadata["languages"].add("SQL")
+                if file in CONFIG_FILES:
+                    self._parse_config_file(full_path, file, file_id)
 
+                if ext in [".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".java", ".cs", ".php", ".rb"]:
+                    files_to_parse.append((full_path, rel_path, file_id))
+                elif ext == ".sql" or "schema" in file.lower() or "db" in file.lower():
+                    # Handle DB
                     db_entity_id = f"db:{rel_path}"
                     self.metadata["entities"].append(
                         {
@@ -162,75 +192,79 @@ class ParserEngine:
 
         return self._format_response()
 
+    def _get_language_from_ext(self, ext: str) -> str:
+        mapping = {
+            ".js": "JavaScript", ".jsx": "JavaScript",
+            ".ts": "TypeScript", ".tsx": "TypeScript",
+            ".py": "Python", ".go": "Go", ".java": "Java",
+            ".cs": "C#", ".php": "PHP", ".rb": "Ruby", ".sql": "SQL"
+        }
+        return mapping.get(ext)
+
     def _parse_file_wrapper(self, args):
         try:
             return self._parse_file(*args)
         except Exception as e:
             return e
 
-    def _parse_package_json(self, file_path: str, file_id: str):
+    def _parse_config_file(self, full_path: str, filename: str, file_id: str):
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            with open(full_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            content_to_check = content.lower()
+            if filename == "package.json":
+                data = json.loads(content)
                 deps = data.get("dependencies", {})
                 dev_deps = data.get("devDependencies", {})
-                self.metadata["dependencies"].update(deps)
-
                 all_deps = {**deps, **dev_deps}
-                for fw, key in [
-                    ("Next.js", "next"),
-                    ("React", "react"),
-                    ("Express", "express"),
-                ]:
-                    if key in all_deps:
-                        self.metadata["frameworks"].add(fw)
-                if any(k in all_deps for k in ["pg", "typeorm", "prisma", "sequelize"]):
-                    self.metadata["frameworks"].add("Relational-DB")
+                for d in all_deps:
+                    self.metadata["dependencies"][d] = all_deps[d]
+                content_to_check = json.dumps(all_deps).lower()
 
-                # Add external service entities for major deps
-                for dep in all_deps:
-                    if dep in [
-                        "stripe",
-                        "sendgrid",
-                        "twilio",
-                        "auth0",
-                        "supabase",
-                        "firebase",
-                    ]:
-                        ext_id = f"ext:{dep}"
-                        if not any(
-                            e["id"] == ext_id for e in self.metadata["entities"]
-                        ):
-                            self.metadata["entities"].append(
-                                {
-                                    "id": ext_id,
-                                    "type": "external_service",
-                                    "name": dep,
-                                    "path": "package.json",
-                                    "evidence": [
-                                        {
-                                            "evidence_id": str(uuid.uuid4()),
-                                            "source_type": "dependency",
-                                            "reference": "package.json",
-                                            "snippet_or_description": f"Found '{dep}' in package.json",
-                                            "reasoning_type": "DIRECT",
-                                        }
-                                    ],
-                                }
-                            )
-                        self.metadata["relationships"].append(
+            for indicator, framework in FRAMEWORK_INDICATORS.items():
+                if indicator in content_to_check:
+                    self.metadata["frameworks"][framework] = self.metadata["frameworks"].get(framework, 0) + 1.0
+
+            if any(k in content_to_check for k in ["pg", "typeorm", "prisma", "sequelize", "sqlalchemy", "mongoose", "psycopg2"]):
+                self.metadata["frameworks"]["Relational/Document-DB"] = self.metadata["frameworks"].get("Relational/Document-DB", 0) + 1.0
+
+            # Add external service entities for major deps
+            services = ["stripe", "sendgrid", "twilio", "auth0", "supabase", "firebase", "aws-sdk", "google-cloud"]
+            for dep in services:
+                if dep in content_to_check:
+                    ext_id = f"ext:{dep}"
+                    if not any(e["id"] == ext_id for e in self.metadata["entities"]):
+                        self.metadata["entities"].append(
                             {
-                                "source_id": file_id,
-                                "target_id": ext_id,
-                                "type": "DEPENDS_ON",
-                                "confidence": 1.0,
-                                "evidence": [],
+                                "id": ext_id,
+                                "type": "external_service",
+                                "name": dep,
+                                "path": filename,
+                                "evidence": [
+                                    {
+                                        "evidence_id": str(uuid.uuid4()),
+                                        "source_type": "dependency",
+                                        "reference": filename,
+                                        "snippet_or_description": f"Found '{dep}' dependency/indicator",
+                                        "reasoning_type": "DIRECT",
+                                    }
+                                ],
                             }
                         )
+                    self.metadata["relationships"].append(
+                        {
+                            "source_id": file_id,
+                            "target_id": ext_id,
+                            "type": "DEPENDS_ON",
+                            "confidence": 1.0,
+                            "evidence": [],
+                        }
+                    )
 
         except Exception as e:
             self.metadata["partial_failure"] = True
-            self.metadata["errors"].append(f"package.json parsing error: {str(e)}")
+            self.metadata["errors"].append(f"Config parsing error in {filename}: {str(e)}")
 
     def _parse_file(self, full_path: str, rel_path: str, file_id: str) -> dict:
         result = {"routes": [], "entities": [], "relationships": []}
@@ -239,26 +273,23 @@ class ParserEngine:
                 content = f.read()
                 lines = content.splitlines()
 
-                # Basic entity extraction using regex (Python/JS/TS)
-                # 1. Functions
-                func_pattern = re.compile(
-                    r"(?:async\s+)?(?:function\s+([a-zA-Z0-9_]+)|const\s+([a-zA-Z0-9_]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[^=]*)\s*=>|def\s+([a-zA-Z0-9_]+)\s*\()"
-                )
-                # 2. Classes
-                class_pattern = re.compile(r"class\s+([a-zA-Z0-9_]+)")
-                # 3. Imports
-                import_pattern = re.compile(
-                    r'(?:import\s+.*from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\)|import\s+[\'"]([^\'"]+)[\'"]|from\s+([^\s]+)\s+import|import\s+([^\s]+))'
-                )
-
+                # Basic generic extraction logic across languages
                 for i, line in enumerate(lines):
-                    # Route detection
-                    if (
-                        "app.get(" in line
-                        or "router.post(" in line
-                        or "app.post(" in line
-                        or "router.get(" in line
-                    ):
+                    # Route detection (Generic heuristics)
+                    is_route = False
+                    if re.search(r'(?:app|router|http|r)\.(?:get|post|put|delete|patch|handlefunc)\s*\(', line, re.IGNORECASE):
+                        is_route = True
+                    elif re.search(r'@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(', line, re.IGNORECASE):
+                        is_route = True
+                    elif re.search(r'@(?:Get|Post|Put|Delete)Mapping\s*\(', line, re.IGNORECASE):
+                        is_route = True
+                    elif re.search(r'\[Http(?:Get|Post|Put|Delete)\]', line, re.IGNORECASE):
+                        is_route = True
+                    elif re.search(r'(?:export default function|export async function (?:GET|POST|PUT|DELETE))', line, re.IGNORECASE):
+                        if "api" in rel_path.lower() or "app/" in rel_path.lower() or "pages/" in rel_path.lower():
+                            is_route = True
+
+                    if is_route:
                         route_id = f"route:{rel_path}:{i}"
                         result["routes"].append(rel_path)
                         result["entities"].append(
@@ -287,50 +318,14 @@ class ParserEngine:
                                 "evidence": [],
                             }
                         )
-                    elif (
-                        "export default function" in line
-                        or "export async function GET" in line
-                        or "export async function POST" in line
-                    ) and (
-                        "pages/api" in rel_path
-                        or "app/api" in rel_path
-                        or "app/" in rel_path
-                    ):
-                        route_id = f"route:{rel_path}:{i}"
-                        result["routes"].append(rel_path)
-                        result["entities"].append(
-                            {
-                                "id": route_id,
-                                "type": "route",
-                                "name": "Next.js Route",
-                                "path": rel_path,
-                                "evidence": [
-                                    {
-                                        "evidence_id": str(uuid.uuid4()),
-                                        "source_type": "code_pattern",
-                                        "reference": f"{rel_path}:{i+1}",
-                                        "snippet_or_description": line.strip(),
-                                        "reasoning_type": "DIRECT",
-                                    }
-                                ],
-                            }
-                        )
-                        result["relationships"].append(
-                            {
-                                "source_id": file_id,
-                                "target_id": route_id,
-                                "type": "EXPOSES",
-                                "confidence": 1.0,
-                                "evidence": [],
-                            }
-                        )
 
                     # Function detection
-                    func_match = func_pattern.search(line)
+                    func_match = re.search(r'(?:def|function|func)\s+([a-zA-Z0-9_]+)', line)
+                    if not func_match:
+                        func_match = re.search(r'const\s+([a-zA-Z0-9_]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[^=]*)\s*=>', line)
+                    
                     if func_match:
-                        func_name = next(
-                            g for g in func_match.groups() if g is not None
-                        )
+                        func_name = func_match.group(1)
                         func_id = f"func:{rel_path}:{func_name}"
                         result["entities"].append(
                             {
@@ -359,8 +354,8 @@ class ParserEngine:
                             }
                         )
 
-                    # Class detection
-                    class_match = class_pattern.search(line)
+                    # Class/Struct detection
+                    class_match = re.search(r'(?:class|struct|interface)\s+([a-zA-Z0-9_]+)', line)
                     if class_match:
                         class_name = class_match.group(1)
                         class_id = f"class:{rel_path}:{class_name}"
@@ -392,13 +387,10 @@ class ParserEngine:
                         )
 
                     # Import detection
-                    import_match = import_pattern.search(line)
+                    import_match = re.search(r'(?:import\s+.*from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\)|import\s+[\'"]([^\'"]+)[\'"]|from\s+([^\s]+)\s+import|import\s+([^\s]+))', line)
                     if import_match:
-                        import_target = next(
-                            g for g in import_match.groups() if g is not None
-                        )
-                        if import_target.startswith("."):
-                            # It's a local import, we can try to link it roughly
+                        import_target = next(g for g in import_match.groups() if g is not None)
+                        if import_target.startswith(".") or "/" in import_target:
                             import_id = f"file:{import_target}"
                             result["relationships"].append(
                                 {
@@ -420,10 +412,17 @@ class ParserEngine:
 
         except Exception as e:
             logger.warning(f"Failed to parse {full_path}: {str(e)}")
+            # Mark file level failure if it fails
+            self.metadata["partial_failure"] = True
+            self.metadata["errors"].append(f"Failed to parse {rel_path}: {str(e)}")
 
         return result
 
     def _format_response(self) -> dict:
-        self.metadata["languages"] = list(self.metadata["languages"])
-        self.metadata["frameworks"] = list(self.metadata["frameworks"])
+        self.metadata["languages"] = list(self.metadata["languages"].keys())
+        # Filter frameworks by confidence or just extract names
+        self.metadata["frameworks"] = list(self.metadata["frameworks"].keys())
+        self.metadata["parser_status"] = "partial" if self.metadata["partial_failure"] else "success"
+        if not self.metadata["entities"]:
+            self.metadata["parser_status"] = "unsupported"
         return self.metadata
