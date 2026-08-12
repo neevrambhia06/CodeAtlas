@@ -48,7 +48,9 @@ class DomainInferenceEngine:
         }
         """
 
-        llm_response = await LLMProvider.call_llm(prompt, context_kg, schema_instructions=schema_instructions)
+        llm_response = await LLMProvider.call_llm(
+            prompt, context_kg, schema_instructions=schema_instructions
+        )
 
         finding = Finding(
             finding_id=str(uuid.uuid4()),

@@ -48,9 +48,20 @@ class ArchitectureInferenceEngine:
         for n in self.kg.get("nodes", []):
             entity = n.get("entity", {})
             flat_node = {**n, **entity}
-            
+
             t = flat_node.get("type", "").lower()
-            if t in ["project", "route", "database", "external_service", "module", "component", "service", "api", "controller", "model"]:
+            if t in [
+                "project",
+                "route",
+                "database",
+                "external_service",
+                "module",
+                "component",
+                "service",
+                "api",
+                "controller",
+                "model",
+            ]:
                 context_nodes.append(
                     {
                         "id": flat_node.get("id"),
@@ -91,7 +102,9 @@ class ArchitectureInferenceEngine:
         """
 
         try:
-            llm_response = await LLMProvider.call_llm(prompt, context_kg, schema_instructions=schema_instructions)
+            llm_response = await LLMProvider.call_llm(
+                prompt, context_kg, schema_instructions=schema_instructions
+            )
         except Exception as e:
             logger.error(f"Error inferring architecture: {e}")
             return []
@@ -122,16 +135,18 @@ class ArchitectureInferenceEngine:
             relationships = rn.get("relationships", [])
             parsed_relationships = []
             deps = []
-            
+
             for rel in relationships:
                 tid = rel.get("target_id")
                 rtype = rel.get("type", "depends_on")
                 if tid:
                     deps.append(tid)
                     try:
-                        parsed_relationships.append(ArchitectureRelationship(target_id=tid, type=rtype))
+                        parsed_relationships.append(
+                            ArchitectureRelationship(target_id=tid, type=rtype)
+                        )
                     except:
-                        pass # Ignore if enum is slightly off
+                        pass  # Ignore if enum is slightly off
 
             nodes.append(
                 ArchitectureNode(
@@ -143,7 +158,7 @@ class ArchitectureInferenceEngine:
                     evidence=evidence_list,
                     children=rn.get("children", []),
                     dependencies=list(set(deps)),
-                    relationships=parsed_relationships
+                    relationships=parsed_relationships,
                 )
             )
 

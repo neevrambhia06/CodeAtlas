@@ -73,36 +73,54 @@ class LogicGapDetector:
             # Accommodate both flat schema and nested entity schema
             entity = n.get("entity", {})
             flat_node = {**n, **entity}
-            
+
             node_map[flat_node.get("id")] = flat_node
-            
+
             n_type = flat_node.get("type", "Unknown").lower()
-            if n_type in ["route", "middleware", "api", "function", "external_service", "database", "controller", "model"]:
+            if n_type in [
+                "route",
+                "middleware",
+                "api",
+                "function",
+                "external_service",
+                "database",
+                "controller",
+                "model",
+            ]:
                 snippet = flat_node.get("content", "") or ""
                 for ev in flat_node.get("evidence", []):
                     if hasattr(ev, "snippet_or_description"):
                         snippet += ev.snippet_or_description + " "
                     elif isinstance(ev, dict):
                         snippet += ev.get("snippet_or_description", "") + " "
-                        
-                context_nodes.append({
-                    "id": flat_node.get("id"),
-                    "name": flat_node.get("name", "Unknown"),
-                    "type": flat_node.get("type", "Unknown"),
-                    "path": flat_node.get("file_path", flat_node.get("path", "")),
-                    "snippet": snippet[:200].strip() # keep short for token limit
-                })
-                
+
+                context_nodes.append(
+                    {
+                        "id": flat_node.get("id"),
+                        "name": flat_node.get("name", "Unknown"),
+                        "type": flat_node.get("type", "Unknown"),
+                        "path": flat_node.get("file_path", flat_node.get("path", "")),
+                        "snippet": snippet[:200].strip(),  # keep short for token limit
+                    }
+                )
+
         kg_context = {
             "nodes": [
-                {"id": n["id"], "label": f"{n['name']} ({n['path']})", "type": n["type"], "context": n["snippet"]}
+                {
+                    "id": n["id"],
+                    "label": f"{n['name']} ({n['path']})",
+                    "type": n["type"],
+                    "context": n["snippet"],
+                }
                 for n in context_nodes
             ],
-            "edges": kg.get("edges", []) # Include edges so LLM sees relationships
+            "edges": kg.get("edges", []),  # Include edges so LLM sees relationships
         }
 
         try:
-            llm_response = await LLMProvider.call_llm(prompt, kg_context, schema_instructions=schema_instructions)
+            llm_response = await LLMProvider.call_llm(
+                prompt, kg_context, schema_instructions=schema_instructions
+            )
             gaps = llm_response.get("gaps", [])
         except Exception as e:
             logger.error(f"Logic Gap LLM generation failed: {e}")
@@ -113,14 +131,14 @@ class LogicGapDetector:
             title = gap.get("title")
             if not title:
                 continue
-                
+
             # Compile reasoning format
             expected = gap.get("what_was_expected", "")
             checked = ", ".join(gap.get("what_was_checked", []))
             found = gap.get("what_was_found", "")
             matters = gap.get("why_it_matters", "")
             conf_stat = gap.get("confidence_status", "UNVERIFIED")
-            
+
             reasoning = (
                 f"WHAT WAS EXPECTED:\n{expected}\n\n"
                 f"WHAT WAS CHECKED:\n{checked}\n\n"
@@ -128,7 +146,7 @@ class LogicGapDetector:
                 f"WHY IT MATTERS:\n{matters}\n\n"
                 f"CONFIDENCE:\n{conf_stat}"
             )
-            
+
             traces = []
             for ev_trace in gap.get("evidence_traces", []):
                 traces.append(
@@ -142,33 +160,33 @@ class LogicGapDetector:
                         snippet_or_description=ev_trace.get("why_it_supports", ""),
                         title=f"{ev_trace.get('type', 'EVIDENCE')} in {ev_trace.get('file', '')}",
                         strength="HIGH",
-                        reasoning_type="LLM_INFERRED"
+                        reasoning_type="LLM_INFERRED",
                     )
                 )
 
             # Enforce severity allowed values
             sev = gap.get("severity", "MEDIUM")
             if sev == "INFORMATIONAL":
-                sev = "LOW" # Pydantic schema only allows CRITICAL, HIGH, MEDIUM, LOW
+                sev = "LOW"  # Pydantic schema only allows CRITICAL, HIGH, MEDIUM, LOW
 
             affected = gap.get("affected_components", [])
             if not affected:
                 affected = ["application-core"]
-                
+
             findings.append(
                 GapFinding(
                     id=str(uuid.uuid4()),
                     title=title,
                     severity=sev,
                     category=gap.get("category", "ARCHITECTURE"),
-                    description=found, # Use found for top level description
+                    description=found,  # Use found for top level description
                     evidenceTraces=traces,
                     checkedAreas=gap.get("what_was_checked", []),
                     affectedComponents=affected,
                     confidence=gap.get("confidence_score", "LOW"),
                     impact=matters,
                     recommendation=gap.get("recommendation", ""),
-                    reasoning=reasoning
+                    reasoning=reasoning,
                 )
             )
 

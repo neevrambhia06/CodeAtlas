@@ -52,29 +52,44 @@ class CapabilityDetector:
             entity = n.get("entity", {})
             if not entity:
                 continue
-            
+
             node_map[n.get("id")] = entity
-            if entity.get("type") in ["route", "database", "external_service", "function", "class", "entry_point"]:
-                context_nodes.append({
-                    "id": n.get("id"),
-                    "name": entity.get("name", "Unknown"),
-                    "type": entity.get("type", "Unknown"),
-                    "path": entity.get("path", "")
-                })
-                
+            if entity.get("type") in [
+                "route",
+                "database",
+                "external_service",
+                "function",
+                "class",
+                "entry_point",
+            ]:
+                context_nodes.append(
+                    {
+                        "id": n.get("id"),
+                        "name": entity.get("name", "Unknown"),
+                        "type": entity.get("type", "Unknown"),
+                        "path": entity.get("path", ""),
+                    }
+                )
+
         kg_context = {
             "nodes": [
-                {"id": n["id"], "label": f"{n['name']} ({n['path']})", "type": n["type"]}
+                {
+                    "id": n["id"],
+                    "label": f"{n['name']} ({n['path']})",
+                    "type": n["type"],
+                }
                 for n in context_nodes
             ],
-            "edges": []
+            "edges": [],
         }
 
-        llm_response = await LLMProvider.call_llm(prompt, kg_context, schema_instructions=schema_instructions)
+        llm_response = await LLMProvider.call_llm(
+            prompt, kg_context, schema_instructions=schema_instructions
+        )
 
         findings = []
         caps = llm_response.get("capabilities", [])
-        
+
         for cap in caps:
             name = cap.get("name")
             desc = cap.get("description")
@@ -82,15 +97,15 @@ class CapabilityDetector:
             conf_exp = cap.get("confidence_explanation", "")
             status = cap.get("status", "INSUFFICIENT_EVIDENCE")
             node_ids = cap.get("evidence_node_ids", [])
-            
+
             if not name:
                 continue
-                
+
             evidence_list = []
             related_entities = set()
             entry_points = set()
             dependencies = set()
-            
+
             if status != "NOT_DETECTED":
                 for nid in node_ids:
                     if nid in node_map:
@@ -105,17 +120,17 @@ class CapabilityDetector:
                             )
                         )
                         related_entities.add(entity.get("name", ""))
-                        
+
                         if entity.get("type") in ["route", "entry_point"]:
                             entry_points.add(entity.get("path", ""))
                         elif entity.get("type") == "external_service":
                             dependencies.add(entity.get("name", ""))
-                
+
                 if not evidence_list:
                     status = "NOT_DETECTED"
                     conf = "LOW"
                     conf_exp = "No valid evidence found in repository."
-                
+
             findings.append(
                 CapabilityFinding(
                     id=str(uuid.uuid4()),

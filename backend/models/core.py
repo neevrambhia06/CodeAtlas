@@ -91,7 +91,11 @@ class CapabilityFinding(BaseModel):
     entryPoints: List[str] = []
     dependencies: List[str] = []
     implementationStatus: Literal[
-        "CONFIRMED", "PARTIALLY_IMPLEMENTED", "INFERRED", "INSUFFICIENT_EVIDENCE", "NOT_DETECTED"
+        "CONFIRMED",
+        "PARTIALLY_IMPLEMENTED",
+        "INFERRED",
+        "INSUFFICIENT_EVIDENCE",
+        "NOT_DETECTED",
     ]
     confidence_explanation: str = ""
 
@@ -238,7 +242,18 @@ class JourneyFinding(BaseModel):
 
 class ArchitectureRelationship(BaseModel):
     target_id: str
-    type: Literal["depends_on", "calls", "reads_from", "writes_to", "exposes", "imports", "publishes", "consumes", "integrates_with"]
+    type: Literal[
+        "depends_on",
+        "calls",
+        "reads_from",
+        "writes_to",
+        "exposes",
+        "imports",
+        "publishes",
+        "consumes",
+        "integrates_with",
+    ]
+
 
 class ArchitectureNode(BaseModel):
     id: str
@@ -266,7 +281,7 @@ class ArchitectureNode(BaseModel):
     evidence: List[Evidence] = []
     children: List[str] = []  # IDs of child nodes
     dependencies: List[str] = []  # Fallback backward-compat
-    relationships: List[ArchitectureRelationship] = [] # specific relationships
+    relationships: List[ArchitectureRelationship] = []  # specific relationships
 
     # Optional enrichments (added post-inference)
     relatedCapabilities: List[str] = []

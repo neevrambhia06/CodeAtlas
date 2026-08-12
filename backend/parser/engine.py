@@ -70,7 +70,7 @@ class ParserEngine:
             "coverage",
             "vendor",
             ".idea",
-            ".vscode"
+            ".vscode",
         }
 
         # Add project entity
@@ -98,19 +98,38 @@ class ParserEngine:
 
             for file in files:
                 full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, self.extract_path).replace("\\", "/")
+                rel_path = os.path.relpath(full_path, self.extract_path).replace(
+                    "\\", "/"
+                )
                 self.metadata["file_tree"].append(rel_path)
 
                 # Identify language by extension
                 ext = os.path.splitext(file)[1].lower()
                 lang = self._get_language_from_ext(ext)
                 if lang:
-                    self.metadata["languages"][lang] = self.metadata["languages"].get(lang, 0) + 1
+                    self.metadata["languages"][lang] = (
+                        self.metadata["languages"].get(lang, 0) + 1
+                    )
 
                 # Entry point detection
                 is_entry = False
-                entry_names = {"main.tsx", "main.jsx", "index.tsx", "index.ts", "server.ts", "app.tsx", "main.py", "manage.py", "program.cs", "main.go"}
-                if file.lower() in entry_names or "app/" in rel_path.lower() or "pages/" in rel_path.lower():
+                entry_names = {
+                    "main.tsx",
+                    "main.jsx",
+                    "index.tsx",
+                    "index.ts",
+                    "server.ts",
+                    "app.tsx",
+                    "main.py",
+                    "manage.py",
+                    "program.cs",
+                    "main.go",
+                }
+                if (
+                    file.lower() in entry_names
+                    or "app/" in rel_path.lower()
+                    or "pages/" in rel_path.lower()
+                ):
                     is_entry = True
 
                 # File entity
@@ -145,7 +164,18 @@ class ParserEngine:
                 if file in CONFIG_FILES:
                     self._parse_config_file(full_path, file, file_id)
 
-                if ext in [".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".java", ".cs", ".php", ".rb"]:
+                if ext in [
+                    ".js",
+                    ".jsx",
+                    ".ts",
+                    ".tsx",
+                    ".py",
+                    ".go",
+                    ".java",
+                    ".cs",
+                    ".php",
+                    ".rb",
+                ]:
                     files_to_parse.append((full_path, rel_path, file_id))
                 elif ext == ".sql" or "schema" in file.lower() or "db" in file.lower():
                     # Handle DB
@@ -194,10 +224,17 @@ class ParserEngine:
 
     def _get_language_from_ext(self, ext: str) -> str:
         mapping = {
-            ".js": "JavaScript", ".jsx": "JavaScript",
-            ".ts": "TypeScript", ".tsx": "TypeScript",
-            ".py": "Python", ".go": "Go", ".java": "Java",
-            ".cs": "C#", ".php": "PHP", ".rb": "Ruby", ".sql": "SQL"
+            ".js": "JavaScript",
+            ".jsx": "JavaScript",
+            ".ts": "TypeScript",
+            ".tsx": "TypeScript",
+            ".py": "Python",
+            ".go": "Go",
+            ".java": "Java",
+            ".cs": "C#",
+            ".php": "PHP",
+            ".rb": "Ruby",
+            ".sql": "SQL",
         }
         return mapping.get(ext)
 
@@ -224,13 +261,37 @@ class ParserEngine:
 
             for indicator, framework in FRAMEWORK_INDICATORS.items():
                 if indicator in content_to_check:
-                    self.metadata["frameworks"][framework] = self.metadata["frameworks"].get(framework, 0) + 1.0
+                    self.metadata["frameworks"][framework] = (
+                        self.metadata["frameworks"].get(framework, 0) + 1.0
+                    )
 
-            if any(k in content_to_check for k in ["pg", "typeorm", "prisma", "sequelize", "sqlalchemy", "mongoose", "psycopg2"]):
-                self.metadata["frameworks"]["Relational/Document-DB"] = self.metadata["frameworks"].get("Relational/Document-DB", 0) + 1.0
+            if any(
+                k in content_to_check
+                for k in [
+                    "pg",
+                    "typeorm",
+                    "prisma",
+                    "sequelize",
+                    "sqlalchemy",
+                    "mongoose",
+                    "psycopg2",
+                ]
+            ):
+                self.metadata["frameworks"]["Relational/Document-DB"] = (
+                    self.metadata["frameworks"].get("Relational/Document-DB", 0) + 1.0
+                )
 
             # Add external service entities for major deps
-            services = ["stripe", "sendgrid", "twilio", "auth0", "supabase", "firebase", "aws-sdk", "google-cloud"]
+            services = [
+                "stripe",
+                "sendgrid",
+                "twilio",
+                "auth0",
+                "supabase",
+                "firebase",
+                "aws-sdk",
+                "google-cloud",
+            ]
             for dep in services:
                 if dep in content_to_check:
                     ext_id = f"ext:{dep}"
@@ -264,7 +325,9 @@ class ParserEngine:
 
         except Exception as e:
             self.metadata["partial_failure"] = True
-            self.metadata["errors"].append(f"Config parsing error in {filename}: {str(e)}")
+            self.metadata["errors"].append(
+                f"Config parsing error in {filename}: {str(e)}"
+            )
 
     def _parse_file(self, full_path: str, rel_path: str, file_id: str) -> dict:
         result = {"routes": [], "entities": [], "relationships": []}
@@ -277,16 +340,36 @@ class ParserEngine:
                 for i, line in enumerate(lines):
                     # Route detection (Generic heuristics)
                     is_route = False
-                    if re.search(r'(?:app|router|http|r)\.(?:get|post|put|delete|patch|handlefunc)\s*\(', line, re.IGNORECASE):
+                    if re.search(
+                        r"(?:app|router|http|r)\.(?:get|post|put|delete|patch|handlefunc)\s*\(",
+                        line,
+                        re.IGNORECASE,
+                    ):
                         is_route = True
-                    elif re.search(r'@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(', line, re.IGNORECASE):
+                    elif re.search(
+                        r"@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(",
+                        line,
+                        re.IGNORECASE,
+                    ):
                         is_route = True
-                    elif re.search(r'@(?:Get|Post|Put|Delete)Mapping\s*\(', line, re.IGNORECASE):
+                    elif re.search(
+                        r"@(?:Get|Post|Put|Delete)Mapping\s*\(", line, re.IGNORECASE
+                    ):
                         is_route = True
-                    elif re.search(r'\[Http(?:Get|Post|Put|Delete)\]', line, re.IGNORECASE):
+                    elif re.search(
+                        r"\[Http(?:Get|Post|Put|Delete)\]", line, re.IGNORECASE
+                    ):
                         is_route = True
-                    elif re.search(r'(?:export default function|export async function (?:GET|POST|PUT|DELETE))', line, re.IGNORECASE):
-                        if "api" in rel_path.lower() or "app/" in rel_path.lower() or "pages/" in rel_path.lower():
+                    elif re.search(
+                        r"(?:export default function|export async function (?:GET|POST|PUT|DELETE))",
+                        line,
+                        re.IGNORECASE,
+                    ):
+                        if (
+                            "api" in rel_path.lower()
+                            or "app/" in rel_path.lower()
+                            or "pages/" in rel_path.lower()
+                        ):
                             is_route = True
 
                     if is_route:
@@ -320,10 +403,15 @@ class ParserEngine:
                         )
 
                     # Function detection
-                    func_match = re.search(r'(?:def|function|func)\s+([a-zA-Z0-9_]+)', line)
+                    func_match = re.search(
+                        r"(?:def|function|func)\s+([a-zA-Z0-9_]+)", line
+                    )
                     if not func_match:
-                        func_match = re.search(r'const\s+([a-zA-Z0-9_]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[^=]*)\s*=>', line)
-                    
+                        func_match = re.search(
+                            r"const\s+([a-zA-Z0-9_]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[^=]*)\s*=>",
+                            line,
+                        )
+
                     if func_match:
                         func_name = func_match.group(1)
                         func_id = f"func:{rel_path}:{func_name}"
@@ -355,7 +443,9 @@ class ParserEngine:
                         )
 
                     # Class/Struct detection
-                    class_match = re.search(r'(?:class|struct|interface)\s+([a-zA-Z0-9_]+)', line)
+                    class_match = re.search(
+                        r"(?:class|struct|interface)\s+([a-zA-Z0-9_]+)", line
+                    )
                     if class_match:
                         class_name = class_match.group(1)
                         class_id = f"class:{rel_path}:{class_name}"
@@ -387,9 +477,14 @@ class ParserEngine:
                         )
 
                     # Import detection
-                    import_match = re.search(r'(?:import\s+.*from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\)|import\s+[\'"]([^\'"]+)[\'"]|from\s+([^\s]+)\s+import|import\s+([^\s]+))', line)
+                    import_match = re.search(
+                        r'(?:import\s+.*from\s+[\'"]([^\'"]+)[\'"]|require\([\'"]([^\'"]+)[\'"]\)|import\s+[\'"]([^\'"]+)[\'"]|from\s+([^\s]+)\s+import|import\s+([^\s]+))',
+                        line,
+                    )
                     if import_match:
-                        import_target = next(g for g in import_match.groups() if g is not None)
+                        import_target = next(
+                            g for g in import_match.groups() if g is not None
+                        )
                         if import_target.startswith(".") or "/" in import_target:
                             import_id = f"file:{import_target}"
                             result["relationships"].append(
@@ -422,7 +517,9 @@ class ParserEngine:
         self.metadata["languages"] = list(self.metadata["languages"].keys())
         # Filter frameworks by confidence or just extract names
         self.metadata["frameworks"] = list(self.metadata["frameworks"].keys())
-        self.metadata["parser_status"] = "partial" if self.metadata["partial_failure"] else "success"
+        self.metadata["parser_status"] = (
+            "partial" if self.metadata["partial_failure"] else "success"
+        )
         if not self.metadata["entities"]:
             self.metadata["parser_status"] = "unsupported"
         return self.metadata
