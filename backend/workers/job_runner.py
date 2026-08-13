@@ -201,11 +201,30 @@ class JobRunner:
 
                 # Add timeout handling for LLM tasks
                 try:
-                    domain_inferences = await asyncio.wait_for(domain_engine.infer_domain(job_id), timeout=300)
-                    architecture_nodes = await asyncio.wait_for(arch_engine.infer_architecture(job_id), timeout=300)
-                    capabilities = await asyncio.wait_for(cap_detector.detect(job_id, graph_data, domain_inferences), timeout=300)
-                    journeys = await asyncio.wait_for(journey_recon.reconstruct(job_id, graph_data, capabilities), timeout=300)
-                    gaps = await asyncio.wait_for(gap_detector.detect(job_id, graph_data, domain_inferences, capabilities, journeys), timeout=300)
+                    domain_inferences = await asyncio.wait_for(
+                        domain_engine.infer_domain(job_id), timeout=300
+                    )
+                    architecture_nodes = await asyncio.wait_for(
+                        arch_engine.infer_architecture(job_id), timeout=300
+                    )
+                    capabilities = await asyncio.wait_for(
+                        cap_detector.detect(job_id, graph_data, domain_inferences),
+                        timeout=300,
+                    )
+                    journeys = await asyncio.wait_for(
+                        journey_recon.reconstruct(job_id, graph_data, capabilities),
+                        timeout=300,
+                    )
+                    gaps = await asyncio.wait_for(
+                        gap_detector.detect(
+                            job_id,
+                            graph_data,
+                            domain_inferences,
+                            capabilities,
+                            journeys,
+                        ),
+                        timeout=300,
+                    )
                 except asyncio.TimeoutError:
                     raise Exception("LLM reasoning phase timed out after 300 seconds")
 
@@ -255,10 +274,18 @@ class JobRunner:
 
             except Exception as e:
                 logger.error(f"Job {job_id}: Pipeline failed with error: {str(e)}")
-                await JobRunner._update_job_status(job_id, "FAILED", error_msg=str(e), completed=True)
+                await JobRunner._update_job_status(
+                    job_id, "FAILED", error_msg=str(e), completed=True
+                )
 
     @staticmethod
-    async def _update_job_status(job_id: str, status: str, error_msg: str = None, started: bool = False, completed: bool = False):
+    async def _update_job_status(
+        job_id: str,
+        status: str,
+        error_msg: str = None,
+        started: bool = False,
+        completed: bool = False,
+    ):
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -275,9 +302,11 @@ class JobRunner:
                     db.commit()
                 return  # Success
             except Exception as e:
-                logger.error(f"Failed to update job status (attempt {attempt + 1}): {e}")
+                logger.error(
+                    f"Failed to update job status (attempt {attempt + 1}): {e}"
+                )
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    await asyncio.sleep(2**attempt)  # Exponential backoff
             finally:
                 db.close()
         logger.error(f"Job {job_id} permanently failed to update status to {status}")

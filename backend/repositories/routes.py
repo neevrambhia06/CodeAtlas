@@ -122,7 +122,9 @@ def upload_repository(
             db.query(AnalysisJob)
             .filter(
                 AnalysisJob.repo_id == repo_id,
-                AnalysisJob.status.in_(["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"])
+                AnalysisJob.status.in_(
+                    ["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"]
+                ),
             )
             .first()
         )

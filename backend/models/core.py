@@ -68,7 +68,11 @@ class Finding(BaseModel):
     reasoning_summary: str
     evidence: List[Evidence]
     status: Literal[
-        "Confirmed", "High-Confidence", "Low-Confidence", "Insufficient-Evidence", "Partially Implemented"
+        "Confirmed",
+        "High-Confidence",
+        "Low-Confidence",
+        "Insufficient-Evidence",
+        "Partially Implemented",
     ]
 
     @model_validator(mode="after")

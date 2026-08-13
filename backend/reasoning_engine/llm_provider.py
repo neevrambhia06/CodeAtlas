@@ -30,11 +30,19 @@ class LLMProvider:
     ) -> dict:
         nodes = context.get("nodes", [])
         # To save tokens and avoid massive payloads for huge repos, prioritize high-level entities and limit count
-        priority_types = {"MODULE", "SERVICE", "DATABASE", "ENTRY_POINT", "CAPABILITY", "FRAMEWORK", "ROUTE"}
+        priority_types = {
+            "MODULE",
+            "SERVICE",
+            "DATABASE",
+            "ENTRY_POINT",
+            "CAPABILITY",
+            "FRAMEWORK",
+            "ROUTE",
+        }
         prioritized_nodes = [n for n in nodes if n.get("type") in priority_types]
         other_nodes = [n for n in nodes if n.get("type") not in priority_types]
         limited_nodes = (prioritized_nodes + other_nodes)[:500]
-        
+
         simplified_graph = [
             {"id": n.get("id"), "label": n.get("label"), "type": n.get("type")}
             for n in limited_nodes
@@ -83,7 +91,9 @@ class LLMProvider:
                 return model.generate_content(full_prompt)
 
         try:
-            response = await asyncio.wait_for(loop.run_in_executor(None, run_sync), timeout=30.0)
+            response = await asyncio.wait_for(
+                loop.run_in_executor(None, run_sync), timeout=30.0
+            )
         except asyncio.TimeoutError:
             logger.error("LLM API call timed out after 30 seconds.")
             return {
@@ -92,7 +102,7 @@ class LLMProvider:
                 "confidence_score": 0.0,
                 "reasoning_summary": "LLM_TIMEOUT: AI reasoning temporarily unavailable. Showing evidence-based repository analysis.",
                 "evidence": [],
-                "status": "Insufficient-Evidence"
+                "status": "Insufficient-Evidence",
             }
 
         try:
@@ -147,7 +157,9 @@ class LLMProvider:
                     f"LLM call failed (attempt {attempt + 1}/{max_retries}): {e}"
                 )
                 if attempt == max_retries - 1:
-                    logger.error("LLM Provider exhausted all retries. Returning fallback.")
+                    logger.error(
+                        "LLM Provider exhausted all retries. Returning fallback."
+                    )
                     return {
                         "category": "Analysis Skipped",
                         "label": "Unknown",

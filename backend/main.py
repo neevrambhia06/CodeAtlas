@@ -28,26 +28,37 @@ models.Base.metadata.create_all(bind=engine)
 # Fail fast: verify the database is reachable before accepting requests.
 verify_database_connection()
 
+
 def sweep_orphaned_jobs():
     """If the worker process crashed previously, jobs might be stuck in non-terminal states.
     Sweep them to FAILED on startup so the user isn't stuck polling forever."""
     from database.connection import SessionLocal
+
     try:
         db = SessionLocal()
-        orphaned = db.query(models.AnalysisJob).filter(
-            models.AnalysisJob.status.in_(["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"])
-        ).all()
+        orphaned = (
+            db.query(models.AnalysisJob)
+            .filter(
+                models.AnalysisJob.status.in_(
+                    ["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"]
+                )
+            )
+            .all()
+        )
         for job in orphaned:
             job.status = "FAILED"
             job.error = "Worker process terminated unexpectedly during analysis."
             job.completed_at = models.func.now()
         db.commit()
         if orphaned:
-            logging.getLogger("CodeAtlas").warning(f"Swept {len(orphaned)} orphaned jobs to FAILED state.")
+            logging.getLogger("CodeAtlas").warning(
+                f"Swept {len(orphaned)} orphaned jobs to FAILED state."
+            )
     except Exception as e:
         logging.getLogger("CodeAtlas").error(f"Failed to sweep orphaned jobs: {e}")
     finally:
         db.close()
+
 
 sweep_orphaned_jobs()
 
