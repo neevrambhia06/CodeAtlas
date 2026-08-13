@@ -390,7 +390,7 @@ export default function CapabilityExplorer() {
                                   <div>
                                     <p className="text-sm font-bold text-amber-900">{(gap.title || gap.category || 'Gap').replace('Logic Gap: ', '')}</p>
                                     <p className="text-xs font-medium text-amber-700 mt-0.5">
-                                      {gap.confidence_score >= 0.9 ? 'High confidence' : gap.confidence_score >= 0.7 ? 'Medium-high confidence' : gap.confidence_score >= 0.5 ? 'Medium confidence' : 'Low confidence'} · {(gap.confidence_score * 100).toFixed(0)}%
+                                      {gap.confidence || (gap.confidence_score ? `${(gap.confidence_score * 100).toFixed(0)}%` : 'Medium')}
                                     </p>
                                   </div>
                                 </div>

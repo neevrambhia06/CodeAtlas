@@ -37,7 +37,7 @@ export default function UploadProgress() {
       }
     };
     
-    const interval = setInterval(fetchStatus, 1000);
+    const interval = setInterval(fetchStatus, 2000);
     return () => clearInterval(interval);
   }, [id, router]);
 

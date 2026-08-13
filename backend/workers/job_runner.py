@@ -166,13 +166,11 @@ class JobRunner:
         async with job_semaphore:
             try:
                 logger.info(f"Job {job_id}: Starting pipeline")
-                await JobRunner._update_job_status(job_id, "Uploaded")
+                await JobRunner._update_job_status(job_id, "INGESTING", started=True)
 
                 # Stage 1: Processing
-                await JobRunner._update_job_status(job_id, "Processing")
-
                 # Stage 2: Parsing (CPU Bound - Run in ProcessPool)
-                await JobRunner._update_job_status(job_id, "Parsing")
+                await JobRunner._update_job_status(job_id, "PARSING")
                 metadata = {
                     "frameworks": [],
                     "languages": [],
@@ -186,8 +184,6 @@ class JobRunner:
                         process_pool, run_parser_sync, extract_path
                     )
 
-                await JobRunner._update_job_status(job_id, "Parsed")
-
                 # Stage 2b: Knowledge Graph (CPU Bound - Run in ProcessPool)
                 graph_data = await loop.run_in_executor(
                     process_pool, run_kg_sync, job_id, metadata
@@ -195,28 +191,23 @@ class JobRunner:
                 logger.info(f"Job {job_id}: Knowledge Graph built.")
 
                 # Stage 3: Reasoning (I/O Bound - Async)
-                await JobRunner._update_job_status(job_id, "Reasoning")
+                await JobRunner._update_job_status(job_id, "REASONING")
 
                 domain_engine = DomainInferenceEngine(graph_data)
-                domain_inferences = await domain_engine.infer_domain(job_id)
-
                 arch_engine = ArchitectureInferenceEngine(graph_data)
-                architecture_nodes = await arch_engine.infer_architecture(job_id)
-
                 cap_detector = CapabilityDetector()
-                capabilities = await cap_detector.detect(
-                    job_id, graph_data, domain_inferences
-                )
-
                 journey_recon = JourneyReconstructor()
-                journeys = await journey_recon.reconstruct(
-                    job_id, graph_data, capabilities
-                )
-
                 gap_detector = LogicGapDetector()
-                gaps = await gap_detector.detect(
-                    job_id, graph_data, domain_inferences, capabilities, journeys
-                )
+
+                # Add timeout handling for LLM tasks
+                try:
+                    domain_inferences = await asyncio.wait_for(domain_engine.infer_domain(job_id), timeout=300)
+                    architecture_nodes = await asyncio.wait_for(arch_engine.infer_architecture(job_id), timeout=300)
+                    capabilities = await asyncio.wait_for(cap_detector.detect(job_id, graph_data, domain_inferences), timeout=300)
+                    journeys = await asyncio.wait_for(journey_recon.reconstruct(job_id, graph_data, capabilities), timeout=300)
+                    gaps = await asyncio.wait_for(gap_detector.detect(job_id, graph_data, domain_inferences, capabilities, journeys), timeout=300)
+                except asyncio.TimeoutError:
+                    raise Exception("LLM reasoning phase timed out after 300 seconds")
 
                 # Validate findings (discard invalid ones)
                 valid_domains = [
@@ -233,6 +224,7 @@ class JobRunner:
                 ]
                 valid_gaps = [g for g in gaps if validate_finding(g, graph_data)]
 
+                await JobRunner._update_job_status(job_id, "PERSISTING")
                 # Persist findings to DB
                 try:
                     db = SessionLocal()
@@ -251,32 +243,44 @@ class JobRunner:
                         }
                         job.graph_preview = graph_data
                         db.commit()
+                except Exception as db_e:
+                    logger.error(f"Database error during persistence: {db_e}")
+                    raise Exception(f"Database error during persistence: {db_e}")
                 finally:
                     db.close()
 
                 # Stage 4: Completed
-                await JobRunner._update_job_status(job_id, "Completed")
+                await JobRunner._update_job_status(job_id, "COMPLETED", completed=True)
                 logger.info(f"Job {job_id}: Pipeline completed successfully")
 
             except Exception as e:
                 logger.error(f"Job {job_id}: Pipeline failed with error: {str(e)}")
-                await JobRunner._update_job_status(job_id, "Failed", error_msg=str(e))
+                await JobRunner._update_job_status(job_id, "FAILED", error_msg=str(e), completed=True)
 
     @staticmethod
-    async def _update_job_status(job_id: str, status: str, error_msg: str = None):
-        try:
-            db = SessionLocal()
-            job = db.query(AnalysisJob).filter(AnalysisJob.job_id == job_id).first()
-            if job:
-                job.status = status
-                if error_msg:
-                    job.error = error_msg
-                db.commit()
-        except Exception as e:
-            logger.error(f"Failed to update job status: {e}")
-        finally:
-            db.close()
-        logger.info(f"Job {job_id} Status Update -> {status}")
+    async def _update_job_status(job_id: str, status: str, error_msg: str = None, started: bool = False, completed: bool = False):
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                db = SessionLocal()
+                job = db.query(AnalysisJob).filter(AnalysisJob.job_id == job_id).first()
+                if job:
+                    job.status = status
+                    if error_msg:
+                        job.error = error_msg
+                    if started:
+                        job.started_at = func.now()
+                    if completed:
+                        job.completed_at = func.now()
+                    db.commit()
+                return  # Success
+            except Exception as e:
+                logger.error(f"Failed to update job status (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+            finally:
+                db.close()
+        logger.error(f"Job {job_id} permanently failed to update status to {status}")
 
 
 def enqueue_job(job_id: str, background_tasks, extract_path: str = None):

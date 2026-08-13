@@ -17,7 +17,10 @@ interface Finding {
 }
 
 export default function EvidencePanel({ finding }: { finding: Finding }) {
-  const { status, confidence_score, reasoning_summary, evidence } = finding;
+  const { status, reasoning_summary, evidence } = finding;
+  const confidence_score = finding.confidence_score !== undefined 
+    ? finding.confidence_score 
+    : ((finding as any).confidence === 'HIGH' ? 0.9 : (finding as any).confidence === 'MEDIUM' ? 0.6 : 0.3);
   
   if (status === 'Insufficient-Evidence' || !evidence || evidence.length === 0) {
     return (

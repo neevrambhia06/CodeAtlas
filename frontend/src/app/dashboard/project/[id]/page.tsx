@@ -113,7 +113,9 @@ export default function ProjectDashboard() {
   
   gaps.forEach(g => {
     const title = (g.category || '').toLowerCase();
-    const score = g.confidence_score;
+    const score = g.confidence_score !== undefined ? g.confidence_score : 
+      (g.confidence === 'HIGH' || g.confidence === 'High' ? 0.9 : 
+       g.confidence === 'MEDIUM' || g.confidence === 'Medium' ? 0.6 : 0.3);
     if (score >= 0.85 || title.includes('auth') || title.includes('password')) gapSeverities.critical++;
     else if (score >= 0.7 || title.includes('rate limit')) gapSeverities.high++;
     else if (score >= 0.5) gapSeverities.medium++;
@@ -123,11 +125,21 @@ export default function ProjectDashboard() {
   highRiskCount = gapSeverities.critical + gapSeverities.high;
   
   const avgConfidence = allFindings.length > 0 
-    ? (allFindings.reduce((acc, curr) => acc + (curr.confidence_score || 0), 0) / allFindings.length)
+    ? (allFindings.reduce((acc, curr) => {
+        const score = curr.confidence_score !== undefined ? curr.confidence_score : 
+          (curr.confidence === 'HIGH' || curr.confidence === 'High' ? 0.9 : 
+           curr.confidence === 'MEDIUM' || curr.confidence === 'Medium' ? 0.6 : 0.3);
+        return acc + score;
+      }, 0) / allFindings.length)
     : 0;
     
   const capCompleteness = capabilities.length > 0 
-    ? (capabilities.reduce((acc, curr) => acc + (curr.confidence_score || 0), 0) / capabilities.length) * 100
+    ? (capabilities.reduce((acc, curr) => {
+        const score = curr.confidence_score !== undefined ? curr.confidence_score : 
+          (curr.confidence === 'HIGH' || curr.confidence === 'High' ? 0.9 : 
+           curr.confidence === 'MEDIUM' || curr.confidence === 'Medium' ? 0.6 : 0.3);
+        return acc + score;
+      }, 0) / capabilities.length) * 100
     : 0;
     
   const secScore = Math.max(0, 100 - (gapSeverities.critical * 20 + gapSeverities.high * 10));

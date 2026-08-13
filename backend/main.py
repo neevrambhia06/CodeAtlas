@@ -18,11 +18,38 @@ from admin.routes import router as admin_router
 import logging
 import json
 from datetime import datetime
-from database.connection import engine
+from database.connection import engine, verify_database_connection
 import database.models as models
 import sentry_sdk
 
+# Create tables if they don't exist (idempotent — safe alongside migrations).
 models.Base.metadata.create_all(bind=engine)
+
+# Fail fast: verify the database is reachable before accepting requests.
+verify_database_connection()
+
+def sweep_orphaned_jobs():
+    """If the worker process crashed previously, jobs might be stuck in non-terminal states.
+    Sweep them to FAILED on startup so the user isn't stuck polling forever."""
+    from database.connection import SessionLocal
+    try:
+        db = SessionLocal()
+        orphaned = db.query(models.AnalysisJob).filter(
+            models.AnalysisJob.status.in_(["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"])
+        ).all()
+        for job in orphaned:
+            job.status = "FAILED"
+            job.error = "Worker process terminated unexpectedly during analysis."
+            job.completed_at = models.func.now()
+        db.commit()
+        if orphaned:
+            logging.getLogger("CodeAtlas").warning(f"Swept {len(orphaned)} orphaned jobs to FAILED state.")
+    except Exception as e:
+        logging.getLogger("CodeAtlas").error(f"Failed to sweep orphaned jobs: {e}")
+    finally:
+        db.close()
+
+sweep_orphaned_jobs()
 
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:
@@ -126,7 +153,12 @@ from knowledge_graph.neo4j_client import get_neo4j_client
 
 
 @app.get("/health")
-def health_check(db: Session = Depends(get_db)):
+def health_check():
+    return {"status": "ok", "version": "0.1.0"}
+
+
+@app.get("/health/ready")
+def health_ready_check(db: Session = Depends(get_db)):
     health_status = {
         "status": "ok",
         "version": "0.1.0",

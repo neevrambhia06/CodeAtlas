@@ -81,7 +81,6 @@ export default function LogicGapExplorer() {
     // 1. Title and Text Mapping
     const isResolved = gap.status === 'Resolved';
     const title = gap.title || (gap.category ? gap.category.replace('Logic Gap: ', '') : 'Logic Gap');
-    const confidencePercent = (gap.confidence_score * 100).toFixed(0);
     const impact = gap.impact || gap.rationale || 'Architectural blind spot affecting system reliability or security.';
     const recommendation = gap.recommendation || gap.remediation || 'Review the identified components and implement the missing architectural constraint.';
 

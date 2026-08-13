@@ -27,7 +27,24 @@ export default function ReportsPage() {
             ? data.jobs?.find((j: any) => j.job_id === activeJobId)
             : [...(data.jobs || [])].reverse().find((j: any) => j.status === 'Completed');
             
-          if (completed) setLatestJob(completed);
+          if (completed) {
+            // Fetch detailed findings
+            const jobId = completed.job_id;
+            const [capRes, jourRes, gapRes] = await Promise.all([
+              fetch(`${API_BASE_URL}/capabilities/${jobId}`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null),
+              fetch(`${API_BASE_URL}/journeys/${jobId}`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null),
+              fetch(`${API_BASE_URL}/logic-gaps/${jobId}`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null)
+            ]);
+
+            const findings = {
+              capabilities: capRes && capRes.ok ? (await capRes.json()).capabilities : [],
+              journeys: jourRes && jourRes.ok ? (await jourRes.json()).journeys : [],
+              gaps: gapRes && gapRes.ok ? (await gapRes.json()).logic_gaps : [],
+              domains: []
+            };
+
+            setLatestJob({ ...completed, findings });
+          }
         }
       } catch (err) {
         console.error("Failed to fetch jobs for reports", err);
@@ -66,8 +83,9 @@ export default function ReportsPage() {
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 55);
 
         if (latestJob) {
-          doc.text(`Repository: ${latestJob.repo_id}`, 14, 61);
-          doc.text(`Analysis ID: ${latestJob.job_id}`, 14, 67);
+          doc.text(`Project Name: ${latestJob.project_name || 'Unknown Project'}`, 14, 61);
+          doc.text(`Repository ID: ${latestJob.repo_id}`, 14, 67);
+          doc.text(`Analysis ID: ${latestJob.job_id}`, 14, 73);
 
           const domains = latestJob.findings?.domains || [];
           const capabilities = latestJob.findings?.capabilities || [];
@@ -85,16 +103,16 @@ export default function ReportsPage() {
              doc.setFontSize(16);
              doc.setFont('helvetica', 'bold');
              doc.setTextColor(15, 23, 42);
-             doc.text("Inferred Domains", 14, 85);
+             doc.text("Inferred Domains", 14, 90);
              
              const dData = domains.map((d: any) => [
                d.name || d.label || (d.category ? d.category.replace('Domain: ', '') : 'Unknown'), 
-               (d.confidence_score * 100).toFixed(1) + '%',
-               d.reasoning_summary.replace(/&/g, 'and')
+               d.confidence || (d.confidence_score ? (d.confidence_score * 100).toFixed(1) + '%' : '-'),
+               (d.description || d.reasoning_summary || '').replace(/&/g, 'and')
              ]);
              autoTable(doc, { 
                ...sharedTableStyles,
-               startY: 90, 
+               startY: 95, 
                head: [['Domain', 'Confidence', 'Analysis']], 
                body: dData.length > 0 ? dData : [['No domains found', '-', '-']],
                columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 25 } }
@@ -107,11 +125,11 @@ export default function ReportsPage() {
              doc.text("Detected Capabilities", 14, finalY);
              
              const cData = capabilities
-               .filter((c: any) => c.status !== 'Insufficient-Evidence')
+               .filter((c: any) => c.status !== 'Insufficient-Evidence' && c.implementationStatus !== 'INSUFFICIENT_EVIDENCE')
                .map((c: any) => [
                  c.name || (c.category ? c.category.replace('Capability: ', '') : 'Unknown'), 
-                 (c.confidence_score * 100).toFixed(1) + '%',
-                 c.reasoning_summary.replace(/&/g, 'and')
+                 c.confidence || (c.confidence_score ? (c.confidence_score * 100).toFixed(1) + '%' : '-'),
+                 (c.description || c.confidence_explanation || c.reasoning_summary || '').replace(/&/g, 'and')
                ]);
                
              autoTable(doc, { 
@@ -129,12 +147,20 @@ export default function ReportsPage() {
              doc.text("Reconstructed User Journeys", 14, finalY);
              
              const jData = journeys
-               .filter((j: any) => j.status !== 'Insufficient-Evidence')
-               .map((j: any) => [
-                 j.name || j.label || (j.category ? j.category.replace('Journey: ', '') : 'Unknown'), 
-                 j.reasoning_summary.replace(/&/g, 'and'),
-                 j.evidence?.map((e: any) => e.reference).join('\n') || 'N/A'
-               ]);
+               .filter((j: any) => j.status !== 'Insufficient-Evidence' && j.status !== 'INSUFFICIENT_EVIDENCE')
+               .map((j: any) => {
+                 let steps = 'N/A';
+                 if (j.steps && j.steps.length > 0) {
+                   steps = j.steps.map((s: any) => s.label).join(' -> ');
+                 } else if (j.evidence && j.evidence.length > 0) {
+                   steps = j.evidence.map((e: any) => e.reference).join('\n');
+                 }
+                 return [
+                   j.name || j.label || (j.category ? j.category.replace('Journey: ', '') : 'Unknown'), 
+                   (j.description || j.reasoning_summary || '').replace(/&/g, 'and'),
+                   steps
+                 ];
+               });
                
              autoTable(doc, { 
                ...sharedTableStyles,
@@ -148,19 +174,19 @@ export default function ReportsPage() {
              doc.setFontSize(16);
              doc.setFont('helvetica', 'bold');
              doc.setTextColor(15, 23, 42);
-             doc.text("Critical Logic Gaps & Vulnerabilities", 14, 85);
+             doc.text("Critical Logic Gaps & Vulnerabilities", 14, 90);
              
              const gData = gaps
                .filter((g: any) => g.status !== 'Insufficient-Evidence')
                .map((g: any) => [
                  g.title || (g.category ? g.category.replace('Logic Gap: ', '').replace(/[^a-zA-Z0-9 -]/g, '').trim() : 'Unknown Gap'), 
-                 g.status,
-                 g.reasoning_summary.replace(/[^a-zA-Z0-9 -.,()'"/]/g, '')
+                 g.severity || g.status || '-',
+                 (g.reasoning || g.impact || g.description || g.reasoning_summary || '').replace(/[^a-zA-Z0-9 -.,()'"/]/g, '')
                ]);
                
              autoTable(doc, { 
                ...sharedTableStyles,
-               startY: 90, 
+               startY: 95, 
                head: [['Gap Type', 'Status', 'Architectural Impact']], 
                body: gData.length > 0 ? gData : [['No logic gaps found', '-', '-']],
                headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: 'bold' as const },
@@ -179,10 +205,12 @@ export default function ReportsPage() {
         
         if (latestJob) {
           const capabilities = latestJob.findings?.capabilities || [];
-          capabilities.filter((c: any) => c.status !== 'Insufficient-Evidence').forEach((c: any) => {
+          capabilities.filter((c: any) => c.status !== 'Insufficient-Evidence' && c.implementationStatus !== 'INSUFFICIENT_EVIDENCE').forEach((c: any) => {
             const name = c.name || (c.category ? c.category.replace('Capability: ', '') : 'Unknown');
-            const summary = c.reasoning_summary.replace(/"/g, '""');
-            csv += `Capability,"${name}",${c.confidence_score},${c.status},"${summary}"\n`;
+            const summary = (c.description || c.confidence_explanation || c.reasoning_summary || '').replace(/"/g, '""');
+            const conf = c.confidence || c.confidence_score || '';
+            const stat = c.implementationStatus || c.status || '';
+            csv += `Capability,"${name}",${conf},${stat},"${summary}"\n`;
           });
           if (capabilities.length === 0) {
             csv += `Status,No Data,,,\n`;

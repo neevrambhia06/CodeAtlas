@@ -31,18 +31,13 @@ ALLOWED_GIT_HOSTS = {"github.com", "gitlab.com", "bitbucket.org"}
 
 def is_valid_git_url(url: str) -> bool:
     try:
+        url = url.strip()
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme not in ("http", "https"):
             return False
 
         hostname = parsed.hostname
         if hostname not in ALLOWED_GIT_HOSTS:
-            return False
-
-        # SSRF Protection: Resolve IP and check if it's private/local
-        ip = socket.gethostbyname(hostname)
-        ip_obj = ipaddress.ip_address(ip)
-        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
             return False
 
         return True
@@ -122,6 +117,22 @@ def upload_repository(
                     detail=f"Failed to clone repository: {e.stderr.decode('utf-8')}",
                 )
 
+        # Prevent duplicate jobs for the same repository if one is already running
+        existing_job = (
+            db.query(AnalysisJob)
+            .filter(
+                AnalysisJob.repo_id == repo_id,
+                AnalysisJob.status.in_(["QUEUED", "INGESTING", "PARSING", "REASONING", "PERSISTING"])
+            )
+            .first()
+        )
+        if existing_job:
+            return {
+                "message": "Repository analysis is already in progress",
+                "repo_id": repo_id,
+                "job_id": existing_job.job_id,
+            }
+
         new_repo = Repository(
             repo_id=repo_id, name=final_project_name, url=repository_url
         )
@@ -129,7 +140,7 @@ def upload_repository(
             job_id=job_id,
             repo_id=repo_id,
             project_name=final_project_name,
-            status="Uploaded",
+            status="QUEUED",
         )
         db.add(new_repo)
         db.flush()
@@ -198,7 +209,7 @@ def get_repository(request: Request, repo_id: str, db: Session = Depends(get_db)
 
 
 @router.get("/jobs/{job_id}")
-@limiter.limit("60/minute")
+@limiter.limit("120/minute")
 def get_job_status(request: Request, job_id: str, db: Session = Depends(get_db)):
     job = db.query(AnalysisJob).filter(AnalysisJob.job_id == job_id).first()
     if not job:
